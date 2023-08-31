@@ -67,7 +67,6 @@ PyGObject==3.42.1
 PyJWT==2.3.0
 pyparsing==2.4.7
 pyproj==3.6.0
-python-apt==2.4.0+ubuntu1
 python-dateutil==2.8.2
 pytz==2023.3
 redis==5.0.0
@@ -91,7 +90,6 @@ threadpoolctl==3.2.0
 tqdm==4.66.1
 typing-extensions==3.10.0.2
 tzdata==2023.3
-ubuntu-advantage-tools==8001
 urllib3==2.0.4
 vine==5.0.0
 virtualenv==20.24.3
