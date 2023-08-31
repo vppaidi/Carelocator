@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+</script>
+  <head>
+    <meta charset="utf-8">
+		
+    <style>
+    
+    
+    /* Add CSS styles for the black-bordered section */
+        .footer {
+            background-color: black;
+            color: white;
+            padding: 20px;
+            border-top: 1px solid white;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            margin-right: 10px;
+        }
+        
+        h1 {
+        border-bottom: double;
+        }
+        
+    </style>
+    <title></title>
+  </head>
+  <style>
+h1 {
+  text-align: center;
+}
+</style>
+  <body style="background-color:silver;" >
+    <h1>Decision support system to find optimal retail locations</h1>
+    <br><br>
+	<p>This website will facilitate to provide carbon footprint of chosen retail locations </p>
+		
+		<p>
+		<h2>Area of operation</h2>
+		<br><br>
+		Choose one Option</p>
+		
+		<form method="POST" action="/">
+        
+        <input type="radio" id="radio1" name="radio" value="option1">
+        <label for="radio1">National</label>
+        
+        <input type="radio" id="radio2" name="radio" value="option2">
+        <label for="radio2">Regional</label>
+        
+        <input type="radio" id="radio3" name="radio" value="option3">
+        <label for="radio3">Municipality</label>
+        
+        <br><br>
+        
+        <select id="dropdown1" name="dropdown1" disabled>
+            <option value="Sweden">Sweden</option>
+
+        </select>
+        
+        <select id="dropdown2" name="dropdown2" disabled>
+            <option value="Dalarna">Dalarna</option>
+            <option value="Norrbottens">Norrbottens</option>
+            <option value="Västerbottens">Västerbottens</option>
+            <option value="Västra Götalands">Västra Götalands</option>
+            <option value="Hallands">Hallands</option>
+            <option value="Värmlands">Värmlands</option>
+            
+
+
+
+
+
+        </select>
+        
+        <select id="dropdown3" name="dropdown3" disabled>
+            <option value="Borlänge">Borlänge</option>
+            <option value="Örebro">Örebro</option>
+            <option value="Kungsbacka">Kungsbacka</option>
+            <option value="Örnsköldsvik">Örnsköldsvik</option>
+            <option value="Kungälv">Kungälv</option>
+            <option value="Bollebygd">Bollebygd</option>
+            
+            
+
+
+
+
+
+        </select>
+        
+        <br><br>
+        
+        
+    <input type="radio" id="option1" name="option" value="option10">
+    <label for="option1">Exploiting potential/existing locations</label><br>
+    <input type="radio" id="option2" name="option" value="option11">
+    <label for="option2">Exploring new locations</label><br>
+
+
+    <br><br>
+        
+        <input type="submit" value="Submit">
+    </form>
+    
+    <script>
+        var radioButtons = document.querySelectorAll('input[type="radio"]');
+        var dropdowns = document.querySelectorAll('select');
+
+        function enableDropdowns() {
+            dropdowns.forEach(function(dropdown) {
+                dropdown.disabled = true;
+            });
+
+            var selectedRadio = document.querySelector('input[type="radio"]:checked');
+            if (selectedRadio) {
+                var selectedDropdown = document.getElementById('dropdown' + selectedRadio.value.slice(-1));
+                selectedDropdown.disabled = false;
+            }
+        }
+
+        radioButtons.forEach(function(radioButton) {
+            radioButton.addEventListener('click', enableDropdowns);
+        });
+    </script>
+    		
+    		
+		
+  </body>
+</html>

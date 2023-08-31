@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<script></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <head>
+    
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+	
+      h1 {
+        border-bottom: double;
+        }
+    </style>
+    <title></title>
+  </head>
+  <style>
+h1 {
+  text-align: center;
+}
+</style>
+  <body style="background-color:silver;" >
+    <h1>Decision support system to find optimal retail locations</h1>
+    		
+		<p>Upload location data of existing and potential retail facilities along with preferred facilities</p>
+          <p>Click on the "Choose File" button to upload a CSV file:</p>
+		
+		<form method="POST" action="/upload" enctype="multipart/form-data" id="myForm">
+		<!-- Radio Buttons -->
+        <label><input type="radio" name="fileOption" value="optionA" checked> CSV file with addresses</label>
+        <label><input type="radio" name="fileOption" value="optionB"> CSV file with coordinates</label>
+        
+        
+        <!-- File Input Elements -->
+        <div id="csvA">
+            <p>Upload CSV file with addresses:</p>
+            <input type="file" name="fileA">
+        </div>
+        
+        <div id="csvB" style="display:none;">
+            <p>Upload CSV file with coordinates:</p>
+            <input type="file" name="fileB">
+        </div>
+        
+        
+        <script>
+            // Using jQuery to show/hide the file input based on selected radio button
+            $("input[name='fileOption']").change(function() {
+                if ($(this).val() == 'optionA') {
+                    $("#csvA").show();
+                    $("#csvB").hide();
+                } else {
+                    $("#csvA").hide();
+                    $("#csvB").show();
+                }
+            });
+        </script>
+
+
+        	    	<br><br>
+          <label for="facilities">Choose the number of Facilities including potential and existing: :</label>
+          <select id="facilities" name="facilities">
+              <option value=1>1</option>
+		<option value=2>2</option>
+		<option value=3>3</option>
+		<option value=4>4</option>
+		<option value=5>5</option>
+		<option value=6>6</option>
+		<option value=7>7</option>
+		<option value=8>8</option>
+		<option value=9>9</option>
+		<option value=10>10</option>
+		<option value=11>11</option>
+		<option value=12>12</option>
+		<option value=13>13</option>
+		<option value=14>14</option>
+		<option value=15>15</option>
+		<option value=16>16</option>
+		<option value=17>17</option>
+		<option value=18>18</option>
+          </select>
+       <br><br>
+       <input type="submit" value="Submit">
+       </form>
+       
+       
+		<br>
+	<p> Please wait one second for each address uploaded</p>	
+          
+    <h2>Example File: </h2>
+    <p>Note: Leave the header and file name as it is and update Latitude and Longitude coordinates in WGS84 projection which can be found in Google Maps </p>
+    
+    <p><a href="{{ url_for('download_example') }}">Download Example File</a></p>
+    <br>
+    
+    
+    
+  </body>
+</html>

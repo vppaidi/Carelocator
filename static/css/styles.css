@@ -1,0 +1,10 @@
+.content {
+    display: flex;
+    align-items: left;
+    justify-content: space-between;
+}
+
+.custom-image {
+    width: 500px; /* Adjust the width as needed */
+    height: auto; /* Adjust the height as needed */
+}
