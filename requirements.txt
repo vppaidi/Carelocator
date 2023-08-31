@@ -87,7 +87,6 @@ tasks==2.8.0
 threadpoolctl==3.2.0
 tqdm==4.66.1
 typing-extensions==3.10.0.2
-tzdata==2023.3
 ufw==0.36.1
 urllib3==2.0.4
 vine==5.0.0
