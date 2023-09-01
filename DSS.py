@@ -16,7 +16,6 @@ import requests
 import pulp
 from spopt.locate import PMedian
 from flask import send_from_directory
-import postg
 import osmnx as ox
 import networkx as nx
 import pandas as pd
