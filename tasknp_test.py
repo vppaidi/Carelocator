@@ -88,7 +88,7 @@ def recommend_task(selected_dropdown, P_FACILITIES, origins, wei, addresses):
     
             # Calculate the shortest path length
             try:
-                path_length = nx.shortest_path_length(G, orig_node, dest_node, weight='length')
+                path_length = nx.shortest_path_length(G, orig_node, dest_node, weight='length', cpus=2)
                 print(path_length)
             except nx.NetworkXNoPath:
                 print(f"No path found between ")
