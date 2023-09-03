@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+
+<!-- jQuery AJAX call -->
+<script type="text/javascript">
+$(document).ready(function() {
+    $('#myForm').submit(function(e) {
+        e.preventDefault();  // prevent the form from being submitted normally
+        $('#spinner').show();
+        var formData = new FormData(this); 
+        $.ajax({
+            type: 'POST',
+            url: '/recommend',
+            data: formData,
+            processData: false,  // Important for sending file data
+            contentType: false,  // Important for sending file data
+            success: function(data) {
+                var jobId = data.job_id;
+                
+                // Start an interval to check job status
+                var interval = setInterval(function() {
+                    $.ajax({
+                        type: 'GET',
+                        url: `/task-status/${jobId}`,
+                        success: function(statusData) {
+                            if (statusData.state === "finished") {
+                                clearInterval(interval); // Stop the interval
+                                $('#spinner').hide(); // Hide spinner
+                                window.location.href = `/result2/${jobId}`; // Redirect
+                            } else if (statusData.state === "failed") {
+                                clearInterval(interval);
+                                $('#spinner').hide();
+                                alert("Task failed!");
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            clearInterval(interval);
+                            $('#spinner').hide();
+                            alert("Error checking task status");
+                        }
+                    });
+                }, 5000); // Check every 5 seconds. Adjust as needed.
+            },
+            error: function(xhr, status, error) {
+                // hide the spinner
+                $('#spinner').hide();
+                // display an error message
+                alert('An error occurred: ' + status + '\n' + error);
+            }
+            
+            
+        });
+    });
+    
+     $('#enableUpload').change(function() {
+        if($(this).is(':checked')) {
+            $('#fileUploadSection').show();
+        } else {
+            $('#fileUploadSection').hide();
+        }
+    });
+});
+
+</script>
+
+
+
+
+  <head>
+
+    <meta charset="utf-8">
+		
+    <style>
+      h1 {
+        border-bottom: double;
+        }
+    </style>
+    <title></title>
+  </head>
+  <style>
+h1 {
+  text-align: center;
+}
+</style>
+  <body style="background-color:silver;" >
+  
+    <h1>Decision support system to find optimal retail locations</h1>
+
+		
+		<br><br>
+		
+		<p>This option will consume more time to process. Please be patient! </p>
+      <br>
+       
+    
+		  Step 4: Choose P_Facilities: 
+		  <form method="POST" action="/recommend" enctype="multipart/form-data" id="myForm">
+            <label for="facilities">Select a value for p_facilities:</label>
+            <select id="facilities" name="facilities">
+                <option value=1>1</option>
+				<option value=2>2</option>
+				<option value=3>3</option>
+				<option value=4>4</option>
+				<option value=5>5</option>
+				<option value=6>6</option>
+				<option value=7>7</option>
+				<option value=8>8</option>
+				<option value=9>9</option>
+				<option value=10>10</option>
+				<option value=11>11</option>
+				<option value=12>12</option>
+				<option value=13>13</option>
+				<option value=14>14</option>
+				<option value=15>15</option>
+				<option value=16>16</option>
+				<option value=17>17</option>
+				<option value=18>18</option>
+            </select>
+            
+            <br><br>
+            
+            <!-- Radio button to enable file upload -->
+            <label for="enableUpload">Upload CSV:</label>
+            <input type="radio" id="enableUpload" name="uploadOption" value="yes">
+            <br><br>
+            
+            <!-- CSV file upload input -->
+            <div id="fileUploadSection" style="display: none;"> <!-- Initially hidden -->
+                <label for="csvFile">Choose a CSV file:</label>
+                <input type="file" id="csvFile" name="csvFile" accept=".csv">
+                <br><br>
+            </div>
+            
+            <input type="submit" value="Submit">
+        </form>
+         <!-- Your spinner -->
+   <div id="spinner" class="spinner-border" role="status" style="display: none;">
+   <span class="sr-only">Loading...</span>
+   </div>
+        </form>
+    
+        <h2>Example File: </h2>
+        <p>Note: Leave the header and file name as it is and update Latitude and Longitude coordinates in WGS84 projection which can be found in Google Maps </p>
+        
+        <p><a href="{{ url_for('download_example2') }}">Download Example File for adding addresses with existing facilities</a></p>
+        <br>
+
+        
+  </body>
+</html>

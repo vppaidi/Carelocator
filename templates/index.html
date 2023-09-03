@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+</script>
+  <head>
+    <meta charset="utf-8">
+		
+    <style>
+    
+    
+    /* Add CSS styles for the black-bordered section */
+        .footer {
+            background-color: black;
+            color: white;
+            padding: 20px;
+            border-top: 1px solid white;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            margin-right: 10px;
+        }
+        
+        h1 {
+        border-bottom: double;
+        }
+        
+    </style>
+    <title></title>
+  </head>
+  <style>
+h1 {
+  text-align: center;
+}
+</style>
+  <body style="background-color:silver;" >
+    <h1>Decision support system to find optimal retail locations</h1>
+    <br><br>
+	<p>This website will facilitate to provide carbon footprint of chosen retail locations </p>
+		
+		<p>
+		<h2>Area of operation</h2>
+		<br><br>
+		Choose one Option</p>
+		
+		<form method="POST" action="/">
+        
+        <input type="radio" id="radio1" name="radio" value="option1">
+        <label for="radio1">National</label>
+        
+        <input type="radio" id="radio2" name="radio" value="option2">
+        <label for="radio2">Regional</label>
+        
+        <input type="radio" id="radio3" name="radio" value="option3">
+        <label for="radio3">Municipality</label>
+        
+        <br><br>
+        
+        <select id="dropdown1" name="dropdown1" disabled>
+            <option value="Sweden">Sweden</option>
+
+        </select>
+        
+        <select id="dropdown2" name="dropdown2" disabled>
+            <option value="Dalarnas">Dalarna</option>
+            <option value="Norrbottens">Norrbottens</option>
+            <option value="Västerbottens">Västerbottens</option>
+            <option value="Västra Götalands">Västra Götalands</option>
+            <option value="Hallands">Hallands</option>
+            <option value="Värmlands">Värmlands</option>
+            <option value="Örebro">Örebro</option>
+            <option value="Kronobergs">Kronobergs</option>
+            <option value="Skåne">Skåne</option>
+            <option value="Jönköpings">Jönköpings</option>
+            <option value="Östergötlands">Östergötlands</option>
+            <option value="Södermanlands">Södermanlands</option>
+			<option value="Kalmar">Kalmar</option>
+            <option value="Uppsala">Uppsala</option>
+            <option value="Västernorrlands">Västernorrlands</option>
+            <option value="Gotlands">Gotlands</option>
+            <option value="Jämtlands">Jämtlands</option>
+            <option value="Gävleborgs">Gävleborgs</option>
+            <option value="Blekinge">Blekinge</option>
+            <option value="Västmanlands">Västmanlands</option>
+			<option value="Stockholms">Stockholms</option>
+
+
+        </select>
+        
+        <select id="dropdown3" name="dropdown3" disabled>
+            <option value="Borlänge">Borlänge</option>
+            <option value="Örebro">Örebro</option>
+            <option value="Kungsbacka">Kungsbacka</option>
+            <option value="Örnsköldsvik">Örnsköldsvik</option>
+            <option value="Kungälv">Kungälv</option>
+            <option value="Bollebygd">Bollebygd</option>
+			<option value="Falkenberg">Falkenberg</option>
+            <option value="Uppsala">Uppsala</option>
+            <option value="Ale">Ale</option>
+            <option value="Nyköping">Nyköping</option>
+            <option value="Linköping">Linköping</option>
+            <option value="Klippan">Klippan</option>
+            <option value="Knivsta">Knivsta</option>
+			<option value="Övertorneå">Övertorneå</option>
+            <option value="Norrtälje">Norrtälje</option>
+            <option value="Borgholm">Borgholm</option>
+            <option value="Norrköping">Norrköping</option>
+            <option value="Österåker">Österåker</option>
+            <option value="Grums">Grums</option>
+			<option value="Ludvika">Ludvika</option>
+			<option value="Orsa">Orsa</option>
+            <option value="Ängelholm">Ängelholm</option>
+            <option value="Bromölla">Bromölla</option>
+            <option value="Sala">Sala</option>
+            <option value="Finspång">Finspång</option>
+            <option value="Piteå">Piteå</option>
+			<option value="Östhammar">Östhammar</option>
+			<option value="Söderhamn">Söderhamn</option>
+            <option value="Falun">Falun</option>
+            <option value="Mönsterås">Mönsterås</option>
+            <option value="Håbo">Håbo</option>
+            <option value="Eksjö">Eksjö</option>
+            <option value="Lidköping">Lidköping</option>
+			<option value="Mark">Mark</option>
+			<option value="Ulricehamn">Ulricehamn</option>
+            <option value="Gagnef">Gagnef</option>
+            <option value="Karlstad">Karlstad</option>
+            <option value="Orust">Orust</option>
+            <option value="Forshaga">Forshaga</option>
+            <option value="Sotenäs">Sotenäs</option>
+			<option value="Lycksele">Lycksele</option>
+			<option value="Ovanåker">Ovanåker</option>
+            <option value="Mellerud">Mellerud</option>
+            <option value="Karlskrona">Karlskrona</option>
+            <option value="Mora">Mora</option>
+            <option value="Trosa">Trosa</option>
+            <option value="Mjölby">Mjölby</option>
+			<option value="Ekerö">Ekerö</option>
+			<option value="Vännäs">Vännäs</option>
+            <option value="Dorotea">Dorotea</option>
+            <option value="Lerum">Lerum</option>
+            <option value="Hudiksvall">Hudiksvall</option>
+            <option value="Umeå">Umeå</option>
+            <option value="Ockelbo">Ockelbo</option>
+			<option value="Gnosjö">Gnosjö</option>
+			<option value="Ronneby">Ronneby</option>
+            <option value="Oskarshamn">Oskarshamn</option>
+            <option value="Höganäs">Höganäs</option>
+            <option value="Växjö">Växjö</option>
+            <option value="Ystad">Ystad</option>
+            <option value="Värnamo">Värnamo</option>
+			<option value="Sundsvall">Sundsvall</option>
+			<option value="Lindesberg">Lindesberg</option>
+            <option value="Alvesta">Alvesta</option>
+            <option value="Hagfors">Hagfors</option>
+            <option value="Nässjö">Nässjö</option>
+            <option value="Munkfors">Munkfors</option>
+            <option value="Boden">Boden</option>
+			<option value="Söderköping">Söderköping</option>
+			<option value="Gotland">Gotland</option>
+            <option value="Gullspång">Gullspång</option>
+            <option value="Motala">Motala</option>
+            <option value="Mörbylånga">Mörbylånga</option>
+            <option value="Skellefteå">Skellefteå</option>
+            <option value="Kumla">Kumla</option>
+			<option value="Göteborg">Göteborg</option>
+			<option value="Gällivare">Gällivare</option>
+            <option value="Lysekil">Lysekil</option>
+            <option value="Höör">Höör</option>
+            <option value="Smedjebacken">Smedjebacken</option>
+            <option value="Krokom">Krokom</option>
+            <option value="Lilla Edet">Lilla Edet</option>
+			<option value="Gävle">Gävle</option>
+			<option value="Degerfors">Degerfors</option>
+            <option value="Borås">Borås</option>
+            <option value="Lessebo">Lessebo</option>
+            <option value="Västerås">Västerås</option>
+            <option value="Landskrona">Landskrona</option>
+            <option value="Hässleholm">Hässleholm</option>
+			<option value="Vansbro">Vansbro</option>
+			<option value="Nordanstig">Nordanstig</option>
+            <option value="Jokkmokk">Jokkmokk</option>
+            <option value="Tranås">Tranås</option>
+            <option value="Hällefors">Hällefors</option>
+            <option value="Sunne">Sunne</option>
+            <option value="Bräcke">Bräcke</option>
+			<option value="Åre">Åre</option>
+			<option value="Tingsryd">Tingsryd</option>
+            <option value="Rättvik">Rättvik</option>
+            <option value="Simrishamn">Simrishamn</option>
+            <option value="Tierp">Tierp</option>
+            <option value="Sölvesborg">Sölvesborg</option>
+            <option value="Alingsås">Alingsås</option>
+			<option value="Järfälla">Järfälla</option>
+			<option value="Karlskoga">Karlskoga</option>
+            <option value="Svedala">Svedala</option>
+            <option value="Vetlanda">Vetlanda</option>
+            <option value="Östra Göinge">Östra Göinge</option>
+            <option value="Uddevalla">Uddevalla</option>
+            <option value="Jönköping">Jönköping</option>
+			<option value="Avesta">Avesta</option>
+			<option value="Filipstad">Filipstad</option>
+            <option value="Berg">Berg</option>
+            <option value="Härryda">Härryda</option>
+            <option value="Båstad">Båstad</option>
+            <option value="Tomelilla">Tomelilla</option>
+            <option value="Katrineholm">Katrineholm</option>
+			<option value="Askersund">Askersund</option>
+			<option value="Karlsborg">Karlsborg</option>
+            <option value="Ljusdal">Ljusdal</option>
+            <option value="Eskilstuna">Eskilstuna</option>
+            <option value="Trelleborg">Trelleborg</option>
+            <option value="Gislaved">Gislaved</option>
+            <option value="Kristianstad">Kristianstad</option>
+			<option value="Sollefteå">Sollefteå</option>
+			<option value="Töreboda">Töreboda</option>
+            <option value="Hofors">Hofors</option>
+            <option value="Hultsfred">Hultsfred</option>
+            <option value="Leksand">Leksand</option>
+            <option value="Lekeberg">Lekeberg</option>
+            <option value="Vellinge">Vellinge</option>
+			<option value="Vallentuna">Vallentuna</option>
+			<option value="Härjedalen">Härjedalen</option>
+            <option value="Malung">Malung</option>
+            <option value="Torsby">Torsby</option>
+            <option value="Hylte">Hylte</option>
+            <option value="Sandviken">Sandviken</option>
+            <option value="Helsingborg">Helsingborg</option>
+			<option value="Södertälje">Södertälje</option>
+			<option value="Essunga">Essunga</option>
+            <option value="Olofström">Olofström</option>
+            <option value="Varberg">Varberg</option>
+            <option value="Säter">Säter</option>
+            <option value="Åstorp">Åstorp</option>
+            <option value="Luleå">Luleå</option>
+			<option value="Arvika">Arvika</option>
+			<option value="Kävlinge">Kävlinge</option>
+            <option value="Värmdö">Värmdö</option>
+            <option value="Aneby">Aneby</option>
+            <option value="Kalmar">Kalmar</option>
+            <option value="Karlshamn">Karlshamn</option>
+            <option value="Ödeshög">Ödeshög</option>
+			<option value="Laholm">Laholm</option>
+			<option value="Bollnäs">Bollnäs</option>
+            <option value="Svalöv">Svalöv</option>
+            <option value="Pajala">Pajala</option>
+            <option value="Älvdalen">Älvdalen</option>
+            <option value="Huddinge">Huddinge</option>
+            <option value="Skurup">Skurup</option>
+			<option value="Arvidsjaur">Arvidsjaur</option>
+			<option value="Strömstad">Strömstad</option>
+            <option value="Eslöv">Eslöv</option>
+            <option value="Ånge">Ånge</option>
+            <option value="Åsele">Åsele</option>
+            <option value="Mariestad">Mariestad</option>
+            <option value="Tidaholm">Tidaholm</option>
+			<option value="Sävsjö">Sävsjö</option>
+			<option value="Götene">Götene</option>
+            <option value="Boxholm">Boxholm</option>
+            <option value="Stenungsund">Stenungsund</option>
+            <option value="Tranemo">Tranemo</option>
+            <option value="Halmstad">Halmstad</option>
+            <option value="Sjöbo">Sjöbo</option>
+			<option value="Bjuv">Bjuv</option>
+			<option value="Ljusnarsberg">Ljusnarsberg</option>
+            <option value="Vindeln">Vindeln</option>
+            <option value="Nybro">Nybro</option>
+            <option value="Kramfors">Kramfors</option>
+            <option value="Trollhättan">Trollhättan</option>
+            <option value="Hörby">Hörby</option>
+			<option value="Ljungby">Ljungby</option>
+            <option value="Kiruna">Kiruna</option>
+			<option value="Härnösand">Härnösand</option>
+			<option value="Upplands-Bro">Upplands-Bro</option>
+            <option value="Burlöv">Burlöv</option>
+            <option value="Malmö">Malmö</option>
+            <option value="Nynäshamn">Nynäshamn</option>
+            <option value="Strängnäs">Strängnäs</option>
+            <option value="Storfors">Storfors</option>
+			<option value="Markaryd">Markaryd</option>
+            <option value="Dals-Ed">Dals-Ed</option>
+			<option value="Färgelanda">Färgelanda</option>
+			<option value="Nora">Nora</option>
+            <option value="Tjörn">Tjörn</option>
+            <option value="Storuman">Storuman</option>
+            <option value="Haninge">Haninge</option>
+            <option value="Robertsfors">Robertsfors</option>
+            <option value="Östersund">Östersund</option>
+			<option value="Hallstahammar">Hallstahammar</option>
+            <option value="Nykvarn">Nykvarn</option>
+			<option value="Lund">Lund</option>
+			<option value="Västervik">Västervik</option>
+            <option value="Hallsberg">Hallsberg</option>
+            <option value="Kalix">Kalix</option>
+            <option value="Salem">Salem</option>
+            <option value="Kil">Kil</option>
+            <option value="Uppvidinge">Uppvidinge</option>
+			<option value="Uppvidinge">Uppvidinge</option>
+            <option value="Mölndal">Mölndal</option>
+			<option value="Tibro">Tibro</option>
+			<option value="Nacka">Nacka</option>
+            <option value="Älvkarleby">Älvkarleby</option>
+            <option value="Nordmaling">Nordmaling</option>
+            <option value="Vara">Vara</option>
+            <option value="Surahammar">Surahammar</option>
+            <option value="Kristinehamn">Kristinehamn</option>
+			<option value="Staffanstorp">Staffanstorp</option>
+            <option value="Timrå">Timrå</option>
+			<option value="Bengtsfors">Bengtsfors</option>
+			<option value="Älmhult">Älmhult</option>
+            <option value="Vingåker">Vingåker</option>
+            <option value="Habo">Habo</option>
+            <option value="Vimmerby">Vimmerby</option>
+            <option value="Munkedal">Munkedal</option>
+            <option value="Enköping">Enköping</option>
+			<option value="Hedemora">Hedemora</option>
+			<option value="Lidingö">Lidingö</option>
+            <option value="Tanum">Tanum</option>
+            <option value="Heby">Heby</option>
+            <option value="Skövde">Skövde</option>
+            <option value="Köping">Köping</option>
+            <option value="Hammarö">Hammarö</option>
+			<option value="Örkelljunga">Örkelljunga</option>
+			<option value="Eda">Eda</option>
+            <option value="Botkyrka">Botkyrka</option>
+            <option value="Danderyd">Danderyd</option>
+            <option value="Torsås">Torsås</option>
+            <option value="Skara">Skara</option>
+            <option value="Vadstena">Vadstena</option>
+			<option value="Vaggeryd">Vaggeryd</option>
+			<option value="Perstorp">Perstorp</option>
+            <option value="Vårgårda">Vårgårda</option>
+            <option value="Falköping">Falköping</option>
+            <option value="Åtvidaberg">Åtvidaberg</option>
+            <option value="Älvsbyn">Älvsbyn</option>
+            <option value="Kinda">Kinda</option>
+			<option value="Svenljunga">Svenljunga</option>
+			<option value="Överkalix">Överkalix</option>
+            <option value="Haparanda">Haparanda</option>
+            <option value="Partille">Partille</option>
+            <option value="Osby">Osby</option>
+            <option value="Sigtuna">Sigtuna</option>
+            <option value="Fagersta">Fagersta</option>
+			<option value="Valdemarsvik">Valdemarsvik</option>
+			<option value="Stockholm">Stockholm</option>
+            <option value="Herrljunga">Herrljunga</option>
+            <option value="Sollentuna">Sollentuna</option>
+            <option value="Säffle">Säffle</option>
+            <option value="Gnesta">Gnesta</option>
+            <option value="Ydre">Ydre</option>
+			<option value="Vilhelmina">Vilhelmina</option>
+			<option value="Lomma">Lomma</option>
+            <option value="Flen">Flen</option>
+            <option value="Sorsele">Sorsele</option>
+            <option value="Täby">Täby</option>
+            <option value="Hjo">Hjo</option>
+            <option value="Tyresö">Tyresö</option>
+			<option value="Strömsund">Strömsund</option>
+			<option value="Mullsjö">Mullsjö</option>
+			<option value="Emmaboda">Emmaboda</option>
+            <option value="Kungsör">Kungsör</option>
+            <option value="Upplands Väsby">Upplands Väsby</option>
+            <option value="Högsby">Högsby</option>
+            <option value="Vänersborg">Vänersborg</option>
+            <option value="Skinnskatteberg">Skinnskatteberg</option>
+			<option value="Laxå">Laxå</option>
+			<option value="Öckerö">Öckerö</option>
+			<option value="Norberg">Norberg</option>
+            <option value="Ragunda">Ragunda</option>
+            <option value="Solna">Solna</option>
+            <option value="Arboga">Arboga</option>
+            <option value="Malå">Malå</option>
+            <option value="Årjäng">Årjäng</option>
+			<option value="Åmål">Åmål</option>
+			<option value="Oxelösund">Oxelösund</option>
+			<option value="Vaxholm">Vaxholm</option>
+            <option value="Norsjö">Norsjö</option>
+            <option value="Bjurholm">Bjurholm</option>
+            <option value="Grästorp">Grästorp</option>
+            <option value="Sundbyberg">Sundbyberg</option>
+            <option value="Arjeplog">Arjeplog</option>
+
+        </select>
+        
+        <br><br>
+        
+        
+    <input type="radio" id="option1" name="option" value="option10">
+    <label for="option1">Exploiting potential/existing locations</label><br>
+    <input type="radio" id="option2" name="option" value="option11">
+    <label for="option2">Exploring new locations</label><br>
+
+
+    <br><br>
+        
+        <input type="submit" value="Submit">
+    </form>
+    
+    <script>
+        var radioButtons = document.querySelectorAll('input[type="radio"]');
+        var dropdowns = document.querySelectorAll('select');
+
+        function enableDropdowns() {
+            dropdowns.forEach(function(dropdown) {
+                dropdown.disabled = true;
+            });
+
+            var selectedRadio = document.querySelector('input[type="radio"]:checked');
+            if (selectedRadio) {
+                var selectedDropdown = document.getElementById('dropdown' + selectedRadio.value.slice(-1));
+                selectedDropdown.disabled = false;
+            }
+        }
+
+        radioButtons.forEach(function(radioButton) {
+            radioButton.addEventListener('click', enableDropdowns);
+        });
+    </script>
+    		
+    		
+		
+  </body>
+</html>
