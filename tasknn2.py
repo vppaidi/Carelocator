@@ -34,11 +34,11 @@ from rq import get_current_job
 from worker3 import haversine
 
 
-REDIS_HOST = os.getenv('REDIS_HOST')
-REDIS_PORT = int(os.getenv('REDIS_PORT'))
-REDIS_DB = int(os.getenv('REDIS_DB'))
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
-REDIS_SSL = os.getenv('REDIS_SSL') == 'True'
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+REDIS_DB = int(os.getenv('REDIS_DB', 0))
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
+REDIS_SSL = os.getenv('REDIS_SSL', 'False') == 'True'
 
 redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, ssl=REDIS_SSL)
 
