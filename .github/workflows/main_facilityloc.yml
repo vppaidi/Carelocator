@@ -60,4 +60,4 @@ jobs:
         with:
           app-name: 'facilityloc'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_190502ED42034E629547F1EA04FD8B25 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C90F7F37500745B89098A83C14DF2B8C }}
