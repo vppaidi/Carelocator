@@ -34,8 +34,13 @@ from rq import get_current_job
 from worker3 import haversine
 
 
-redis_url = os.getenv('REDISGREEN_URL', 'redis://localhost:6379')
-redis_conn = redis.StrictRedis.from_url(redis_url)
+REDIS_HOST = os.getenv('REDIS_HOST')
+REDIS_PORT = int(os.getenv('REDIS_PORT'))
+REDIS_DB = int(os.getenv('REDIS_DB'))
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
+REDIS_SSL = os.getenv('REDIS_SSL') == 'True'
+
+redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, ssl=REDIS_SSL)
 
 def pfac_task2(selected_dropdown, P_FACILITIES, uploaded_data_json, facilit,  dm, origins, wei, addresses):
     
