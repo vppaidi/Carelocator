@@ -681,5 +681,5 @@ def browser_closing():
 
 if __name__ == '__main__':
    
-    app.run(False)
+    app.run(True)
 
