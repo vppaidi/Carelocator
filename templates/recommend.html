@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<script>
+
+
+</script>
+<!-- jQuery AJAX call -->
+<script type="text/javascript">
+$(document).ready(function() {
+
+    var map = L.map('map').setView([20, 0], 2); // Default view
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    
+    function fetchErrorMessage(jobId) {
+            $.ajax({
+                type: 'GET',
+                url: `/fetch-error/${jobId}`,
+                success: function(data) {
+                    // Display the error message
+                    alert("Error: " + data.error_message);
+                },
+                error: function(err) {
+                    console.error("Error fetching error message:", err);
+                }
+            });
+        }
+    
+    $('#myForm').submit(function(e) {
+        e.preventDefault();  // prevent the form from being submitted normally
+        $('#spinner').show();
+        var formData = new FormData(this); 
+        $.ajax({
+            type: 'POST',
+            url: '/recommend',
+            data: formData,
+            processData: false,  // Important for sending file data
+            contentType: false,  // Important for sending file data
+            success: function(data) {
+                
+                // alert('The estimated time for completion is between 1-10 minutes. But it can be longer based on the size of area and number of facilities');  // Change the time as needed
+                
+                var jobId = data.job_id;
+                // Access the addresses data
+                var address = data.addr;
+                
+                // Array to store marker coordinates
+                var allMarkers = [];
+             
+                for (var i = 0; i < address.length; i++) {
+                    var lat = parseFloat(address[i].lat);
+                    var lon = parseFloat(address[i].lon);
+                    
+                    // Add the coordinates to allMarkers
+                    allMarkers.push([lat, lon]);
+             
+                    // Add a marker for this coordinate
+                    L.marker([lat, lon]).addTo(map);
+                }
+                
+                // Fit the map view to the bounds of your markers
+                if (allMarkers.length) {
+                    map.fitBounds(allMarkers);
+                }
+                             // Start an interval to check job status
+                var interval = setInterval(function() {
+                    $.ajax({
+                        type: 'GET',
+                        url: `/task-status/${jobId}`,
+                        success: function(statusData) {
+                            if (statusData.state === "finished") {
+                                clearInterval(interval); // Stop the interval
+                                $('#spinner').hide(); // Hide spinner
+                                window.location.href = `/result2/${jobId}`; // Redirect
+                            } else if (statusData.state === "failed") {
+                                clearInterval(interval);
+                                $('#spinner').hide();
+                                fetchErrorMessage(jobId);  // Fetch and display the error message
+                                alert("Task failed!");
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            clearInterval(interval);
+                            $('#spinner').hide();
+                            alert("Error checking task status");
+                        }
+                    });
+                }, 5000); // Check every 5 seconds. Adjust as needed.
+            },
+            error: function(xhr, status, error) {
+                // hide the spinner
+                $('#spinner').hide();
+                // display an error message
+                alert('An error occurred: ' + status + '\n' + error);
+            }
+            
+            
+        });
+    });
+    
+     $('#enableUpload').change(function() {
+        if($(this).is(':checked')) {
+            $('#csvTypeSection').show();  // Show the CSV type radio buttons
+            $('#fileUploadSection').show();  // Show the file upload input
+        } else {
+            $('#csvTypeSection').hide();  // Hide the CSV type radio buttons
+            $('#fileUploadSection').hide();  // Hide the file upload input
+        }
+    });
+
+});
+
+</script>
+
+
+
+
+  <head>
+
+    <meta charset="utf-8">
+		
+    <style>
+      h1 {
+        border-bottom: double;
+        }
+    </style>
+    <title></title>
+  </head>
+  <style>
+h1 {
+  text-align: center;
+}
+</style>
+  <body style="background-color:silver;" >
+  
+    <h1>Exploring environmentally optimal locations</h1>
+
+		
+		<br><br>
+			<p> You may get recommended facility locations irrespective if you have existing facilities. If you have existing facilities, upload their locations marked 1 in the CSV file. (In exploring option you never input 0 in the CSV file)</p> 
+			<p>If there are no existing facilities, no csv file have to be provided.</p> 
+			<p>You may provide locations either as addresses or coordinates.</p>
+			
+			<p><a href="{{ url_for('download_example4') }}">Download CSV example for addresses</a> (Note: Leave the header and file name as it is and update addresses which can be found in Google Maps) </p>
+    
+            <p><a href="{{ url_for('download_example2') }}">Download CSV example for coordinates</a> (Note: Leave the header and file name as it is and update Latitude and Longitude coordinates in WGS84 projection which can be found in Google Maps) </p>
+		
+    
+		   
+		    <form method="POST" action="/recommend" enctype="multipart/form-data" id="myForm">
+			
+            <label for="facilities">Choose the number of facilities (to be added to the existing ones):</label>
+            <input type="number" id="facilities" name="facilities" min="1" max="100" required>
+            <!-- ... other form elements ... -->
+          
+            
+            <br><br>
+            
+            <!-- Radio button to enable file upload -->
+            <label for="enableUpload">Upload CSV:</label>
+            <input type="radio" id="enableUpload" name="uploadOption" value="yes">
+            <br><br>
+            
+            <!-- Div containing the CSV type radio buttons -->
+            <div id="csvTypeSection" style="display: none;"> <!-- Initially hidden -->
+                <!-- Add these radio buttons to select the type of CSV -->
+                <label for="csvTypeC">Upload CSV file with addresses:</label>
+                <input type="radio" id="csvTypeC" name="csvType" value="csv_c" checked>
+                <label for="csvTypeD">Upload CSV file with coordinates:</label>
+                <input type="radio" id="csvTypeD" name="csvType" value="csv_d">
+                <br><br>
+            </div>
+
+
+            <!-- CSV file upload input -->
+            <div id="fileUploadSection" style="display: none;"> <!-- Initially hidden -->
+                <label for="csvFile">Choose a CSV file:</label>
+                <input type="file" id="csvFile" name="csvFile" accept=".csv">
+                <br><br>
+            </div>
+            
+			<p>The computation time can now sometimes be measured in hours, with longer times for larger geographical areas and more facilities.</p>	
+			<br>
+            <input type="submit" value="Submit">
+        </form>
+         <!-- Your spinner -->
+   <div id="spinner" class="spinner-border" role="status" style="display: none;">
+   <span class="sr-only">Loading...</span>
+   </div>
+        </form>
+    
+ 
+		<br>
+		<p> When clicking submit, the map will show the locations of existing facilities in the CSV file.</p>
+        <div id="map" style="width: 600px; height: 400px;"></div>
+        
+        
+
+  </body>
+</html>

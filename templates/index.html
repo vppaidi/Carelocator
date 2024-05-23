@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+<script>
+$(document).ready(function() {
+    var cities = [
+        "Örebro",
+        "Kungsbacka",
+        "Örnsköldsvik",
+        "Kungälv",
+        "Bollebygd",
+        "Falkenberg",
+        "Uppsala",
+        "Ale",
+        "Nyköping",
+        "Linköping",
+        "Klippan",
+        "Knivsta",
+        "Övertorneå",
+        "Norrtälje",
+        "Borgholm",
+        "Norrköping",
+        "Österåker",
+        "Grums",
+        "Ludvika",
+        "Orsa",
+        "Ängelholm",
+        "Bromölla",
+        "Sala",
+        "Finspång",
+        "Piteå",
+        "Östhammar",
+        "Söderhamn",
+        "Falun",
+        "Mönsterås",
+        "Håbo",
+        "Eksjö",
+        "Lidköping",
+        "Mark",
+        "Ulricehamn",
+        "Gagnef",
+        "Karlstad",
+        "Orust",
+        "Forshaga",
+        "Sotenäs",
+        "Lycksele",
+        "Ovanåker",
+        "Mellerud",
+        "Karlskrona",
+        "Mora",
+        "Trosa",
+        "Mjölby",
+        "Ekerö",
+        "Vännäs",
+        "Dorotea",
+        "Gnosjö",
+        "Lerum",
+        "Umeå",
+        "Hudiksvall",
+        "Ockelbo",
+        "Ronneby",
+        "Oskarshamn",
+        "Höganäs",
+        "Växjö",
+        "Ystad",
+        "Värnamo",
+        "Sundsvall",
+        "Lindesberg",
+        "Alvesta",
+        "Hagfors",
+        "Nässjö",
+        "Munkfors",
+        "Boden",
+        "Söderköping",
+        "Gotland",
+        "Borlänge",
+        "Gullspång",
+        "Motala",
+        "Mörbylånga",
+        "Skellefteå",
+        "Kumla",
+        "Göteborg",
+        "Gällivare",
+        "Lysekil",
+        "Höör",
+        "Smedjebacken",
+        "Krokom",
+        "Lilla Edet",
+        "Gävle",
+        "Degerfors",
+        "Borås",
+        "Lessebo",
+        "Västerås",
+        "Landskrona",
+        "Hässleholm",
+        "Vansbro",
+        "Nordanstig",
+        "Jokkmokk",
+        "Tranås",
+        "Hällefors",
+        "Sunne",
+        "Bräcke",
+        "Åre",
+        "Tingsryd",
+        "Rättvik",
+        "Simrishamn",
+        "Tierp",
+        "Sölvesborg",
+        "Alingsås",
+        "Järfälla",
+        "Karlskoga",
+        "Svedala",
+        "Vetlanda",
+        "Östra Göinge",
+        "Uddevalla",
+        "Jönköping",
+        "Avesta",
+        "Filipstad",
+        "Berg",
+        "Härryda",
+        "Båstad",
+        "Tomelilla",
+        "Katrineholm",
+        "Askersund",
+        "Karlsborg",
+        "Ljusdal",
+        "Eskilstuna",
+        "Trelleborg",
+        "Gislaved",
+        "Kristianstad",
+        "Sollefteå",
+        "Töreboda",
+        "Hofors",
+        "Hultsfred",
+        "Leksand",
+        "Lekeberg",
+        "Vellinge",
+        "Vallentuna",
+        "Härjedalen",
+        "Malung",
+        "Torsby",
+        "Hylte",
+        "Sandviken",
+        "Helsingborg",
+        "Södertälje",
+        "Essunga",
+        "Olofström",
+        "Varberg",
+        "Säter",
+        "Åstorp",
+        "Luleå",
+        "Arvika",
+        "Kävlinge",
+        "Värmdö",
+        "Aneby",
+        "Kalmar",
+        "Karlshamn",
+        "Ödeshög",
+        "Laholm",
+        "Bollnäs",
+        "Svalöv",
+        "Pajala",
+        "Älvdalen",
+        "Huddinge",
+        "Skurup",
+        "Arvidsjaur",
+        "Strömstad",
+        "Eslöv",
+        "Ånge",
+        "Åsele",
+        "Mariestad",
+        "Tidaholm",
+        "Sävsjö",
+        "Götene",
+        "Boxholm",
+        "Stenungsund",
+        "Tranemo",
+        "Halmstad",
+        "Sjöbo",
+        "Bjuv",
+        "Ljusnarsberg",
+        "Vindeln",
+        "Nybro",
+        "Kramfors",
+        "Trollhättan",
+        "Hörby",
+        "Ljungby",
+        "Kiruna",
+        "Härnösand",
+        "Upplands-Bro",
+        "Burlöv",
+        "Malmö",
+        "Nynäshamn",
+        "Strängnäs",
+        "Storfors",
+        "Markaryd",
+        "Dals-Ed",
+        "Färgelanda",
+        "Nora",
+        "Tjörn",
+        "Storuman",
+        "Haninge",
+        "Robertsfors",
+        "Östersund",
+        "Hallstahammar",
+        "Nykvarn",
+        "Lund",
+        "Västervik",
+        "Hallsberg",
+        "Kalix",
+        "Salem",
+        "Kil",
+        "Uppvidinge",
+        "Mölndal",
+        "Tibro",
+        "Nacka",
+        "Älvkarleby",
+        "Nordmaling",
+        "Vara",
+        "Surahammar",
+        "Kristinehamn",
+        "Staffanstorp",
+        "Timrå",
+        "Bengtsfors",
+        "Älmhult",
+        "Vingåker",
+        "Habo",
+        "Vimmerby",
+        "Munkedal",
+        "Enköping",
+        "Hedemora",
+        "Lidingö",
+        "Tanum",
+        "Heby",
+        "Skövde",
+        "Köping",
+        "Hammarö",
+        "Örkelljunga",
+        "Eda",
+        "Botkyrka",
+        "Danderyd",
+        "Torsås",
+        "Skara",
+        "Vadstena",
+        "Vaggeryd",
+        "Perstorp",
+        "Vårgårda",
+        "Falköping",
+        "Åtvidaberg",
+        "Älvsbyn",
+        "Kinda",
+        "Svenljunga",
+        "Överkalix",
+        "Haparanda",
+        "Partille",
+        "Osby",
+        "Sigtuna",
+        "Fagersta",
+        "Valdemarsvik",
+        "Stockholm",
+        "Herrljunga",
+        "Sollentuna",
+        "Säffle",
+        "Gnesta",
+        "Ydre",
+        "Vilhelmina",
+        "Lomma",
+        "Flen",
+        "Sorsele",
+        "Täby",
+        "Hjo",
+        "Tyresö",
+        "Strömsund",
+        "Mullsjö",
+        "Emmaboda",
+        "Kungsör",
+        "Upplands Väsby",
+        "Högsby",
+        "Vänersborg",
+        "Skinnskatteberg",
+        "Laxå",
+        "Öckerö",
+        "Norberg",
+        "Ragunda",
+        "Solna",
+        "Arboga",
+        "Malå",
+        "Årjäng",
+        "Åmål",
+        "Oxelösund",
+        "Vaxholm",
+        "Norsjö",
+        "Bjurholm",
+        "Grästorp",
+        "Sundbyberg",
+        "Arjeplog"
+    ];
+    
+    $("#city").autocomplete({
+        source: cities
+    });
+});
+</script>
+  <head>
+    <meta charset="utf-8">
+		
+    <style>
+    
+    
+    /* Add CSS styles for the black-bordered section */
+        .footer {
+            background-color: black;
+            color: white;
+            padding: 20px;
+            border-top: 1px solid white;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            margin-right: 10px;
+        }
+        
+        h1 {
+        border-bottom: double;
+        }
+        
+    </style>
+    <title></title>
+  </head>
+  <style>
+h1 {
+  text-align: center;
+}
+</style>
+  <body style="background-color:silver;" >
+    <h1>eCOmpass: A decision support system to find environmentally optimal facility locations</h1>
+    <br>
+	<h3>This website provides estimates of CO2 emissions for facility location alternatives. 
+	<br>
+	You may provide existing locations and use the exploit option to compare those to possible locations. 
+	<br>
+	You may also get recommended locations that minimizes CO2 emissions using the explore option.
+	<br>
+	</h3>
+	<h3>User manual and IKEA user case</h3>
+    <p>Find manuals and other help documents below:</p>
+    <ul>
+        <li><a href="/static/examples/eCOmpass Instruction Manual.pdf" download="eCOmpass Instruction Manual.pdf">Instruction Manual</a></li>
+        <li><a href="/static/examples/HFI WP 37 Minimizing travel distance and CO2-emissions when reconfiguring retail store networks.pdf" download="HFI WP 37 Minimizing travel distance and CO2-emissions when reconfiguring retail store networks.pdf">HFI working Paper No. 37: Minimizing travel distance and CO2-emissions when reconfiguring retail store networks</a></li>
+        <li><a href="/static/examples/IKEA 1958 to 2000 coordinates.csv" download="IKEA 1958 to 2000 coordinates.csv">IKEA location coordinates between 1958 to 2000</a></li>
+        <li><a href="/static/examples/IKEA 1958 to 2010 coordinates.csv" download="IKEA 1958 to 2010 coordinates.csv">IKEA location coordinates between 1958 to 2010</a></li>
+        <li><a href="/static/examples/IKEA 1958 to 2023 coordinates.csv" download="IKEA 1958 to 2023 coordinates.csv">IKEA location coordinates between 1958 to 2023</a></li>
+    </ul>
+
+		
+		<p>
+		<h3>Geographical area of interest</h3>
+		<p> You may choose to do the location analysis at the national, regional or municipal levels.</p>
+		<p> If you choose a regional or a municipal analysis, then you have to select which region or municipality you are interested in locating facilities in.</p> 
+		<h4>Choose one option</h4>
+		
+		<form method="POST" action="/">
+        
+        <input type="radio" id="radio1" name="radio" value="option1">
+        <label for="radio1">National</label>
+        
+        <input type="radio" id="radio2" name="radio" value="option2">
+        <label for="radio2">Regional</label>
+        
+        <input type="radio" id="radio3" name="radio" value="option3">
+        <label for="radio3">Municipality</label>
+        
+        <br><br>
+        
+        <select id="dropdown1" name="dropdown1" disabled>
+            <option value="Sweden">Sweden</option>
+
+        </select>
+        
+        <select id="dropdown2" name="dropdown2" disabled>
+            <option value="Dalarnas">Dalarna</option>
+            <option value="Norrbottens">Norrbotten</option>
+            <option value="Västerbottens">Västerbotten</option>
+            <option value="Västra Götalands">Västra Götaland</option>
+            <option value="Hallands">Halland</option>
+            <option value="Värmlands">Värmland</option>
+            <option value="Örebro">Örebro</option>
+            <option value="Kronobergs">Kronoberg</option>
+            <option value="Skåne">Skåne</option>
+            <option value="Jönköpings">Jönköping</option>
+            <option value="Östergötlands">Östergötland</option>
+            <option value="Södermanlands">Södermanland</option>
+			<option value="Kalmar">Kalmar</option>
+            <option value="Uppsala">Uppsala</option>
+            <option value="Västernorrlands">Västernorrland</option>
+            <option value="Gotlands">Gotland</option>
+            <option value="Jämtlands">Jämtland</option>
+            <option value="Gävleborgs">Gävleborg</option>
+            <option value="Blekinge">Blekinge</option>
+            <option value="Västmanlands">Västmanland</option>
+			<option value="Stockholms">Stockholm</option>
+
+
+        </select>
+        
+        <input type="text" id="city" name="city" disabled>
+        <p>Note: If you select Municipality, type three characters of the Municipality name to see suggestions</p>
+        
+    	<h3>Exploiting or exploring facility locations</h3>
+		
+		<p>You choose EXPLOIT if you already have possible locations you want to analyze or EXPLORE if you want the DSS to recommend facility locations for you.</p> 
+		
+		<h4>Choose one option</h4>    
+        
+    <input type="radio" id="option1" name="option" value="option10">
+    <label for="option1">EXPLOIT</label>
+    <input type="radio" id="option2" name="option" value="option11">
+    <label for="option2">EXPLORE</label><br>
+
+
+    <br><br>
+        
+        <input type="submit" value="Submit">
+    </form>
+    
+    <script>
+        var radioButtons = document.querySelectorAll('input[type="radio"]');
+        var dropdowns = document.querySelectorAll('select');
+        
+        function enableDropdowns() {
+            // Disable all dropdowns by default
+            dropdowns.forEach(function(dropdown) {
+                dropdown.disabled = true;
+            });
+            
+            // Disable the city text input by default
+            document.getElementById('city').disabled = true;
+            
+            var selectedRadio = document.querySelector('input[type="radio"]:checked');
+            if (selectedRadio) {
+                switch (selectedRadio.value) {
+                    case 'option1': // National
+                        document.getElementById('dropdown1').disabled = false;
+                        break;
+                    case 'option2': // Regional
+                        document.getElementById('dropdown2').disabled = false;
+                        break;
+                    case 'option3': // Municipality
+                        document.getElementById('city').disabled = false;
+                        break;
+                }
+            }
+        }
+        
+        // Add this outside the function, so that it gets executed immediately when the page loads.
+        radioButtons.forEach(function(radioButton) {
+            radioButton.addEventListener('click', enableDropdowns);
+        });
+
+
+
+    </script>
+    		
+    		
+		
+  </body>
+</html>
