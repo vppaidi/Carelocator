@@ -11,6 +11,7 @@ import geopandas as gpd
 from shapely.geometry import Point
 import time
 import io
+import rq
 import csv
 import datetime
 import redis
@@ -310,3 +311,4 @@ def recommend_task4(
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         print(error_message)
         return "Task failed"
+
