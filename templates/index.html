@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareLocator · Optimal health-care centres</title>
+
+  <!-- jQuery UI (unchanged) -->
+  <link rel="stylesheet"
+        href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+  <!-- 💅 Facelift -------------------------------------------------------------------->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap");
+
+    :root{
+      --bg:        #f3f4f6;          /* slate-100  */
+      --surface:   #ffffff;          /* white      */
+      --primary:   #0d9488;          /* teal-600   */
+      --primary-d: #0f766e;          /* teal-700   */
+      --text:      #334155;          /* slate-700  */
+    }
+
+    *{ box-sizing:border-box; font-family:"Inter",sans-serif; }
+    body{ margin:0; background:var(--bg); color:var(--text); }
+
+    /* card -------------------------------------------------------------- */
+    .card{
+      max-width:900px; margin:2rem auto; background:var(--surface);
+      border-radius:0.75rem; box-shadow:0 4px 12px rgba(0,0,0,.07);
+      padding:2rem 3rem;
+    }
+
+    /* headings */
+    h1{ font-size:1.35rem; font-weight:600; margin:0 0 1rem; }
+    h3{ font-size:1rem;  font-weight:600; margin:1.5rem 0 .5rem; }
+
+    /* buttons ----------------------------------------------------------- */
+    .btn-primary{
+      padding:.6rem 1.2rem; border:0; border-radius:.5rem;
+      background:var(--primary); color:#fff; font-weight:600; cursor:pointer;
+      transition:background .2s;
+    }
+    .btn-primary:hover{ background:var(--primary-d); }
+
+    .btn-secondary{
+      padding:.55rem 1.05rem; border-radius:.5rem; font-weight:600;
+      border:2px solid var(--primary); color:var(--primary);
+      background:transparent; text-decoration:none; display:inline-block;
+      transition: all .15s ease;
+    }
+    .btn-secondary:hover{
+      background:var(--primary); color:#fff;
+    }
+
+    /* actions row ------------------------------------------------------- */
+    .actions{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-top:1rem;
+    }
+
+    /* footer ------------------------------------------------------------ */
+    .footer{
+      background:#0f172a; color:#cbd5e1; font-size:.875rem;
+      text-align:center; padding:1rem 2rem; margin-top:4rem;
+    }
+    .footer a{ color:var(--primary); text-decoration:none; margin:0 .4rem; }
+    .footer a:hover{ text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>CareLocator – environmentally&nbsp;optimal health-care centres</h1>
+
+    <p>
+      This tool estimates CO<sub>2</sub> emissions for different centres. Provide
+      existing sites and <strong>exploit</strong> them, or let CareLocator
+      <strong>explore</strong> new locations for you.
+    </p>
+
+    <h3>User manual</h3>
+    <ul>
+      <li><a href="/static/examples/eCOmpass Instruction Manual.pdf" download>
+          Instruction manual</a></li>
+    </ul>
+
+    <hr />
+    <h3>Geographical scope</h3>
+    <p>Run the analysis at national, regional, or municipal level:</p>
+
+    <form method="POST" action="/">
+      <!-- scope radio -->
+      <p>
+        <label><input type="radio" name="radio" value="option1" id="radio1" />
+               National</label>
+        &nbsp;
+        <label><input type="radio" name="radio" value="option2" id="radio2" />
+               Regional</label>
+        &nbsp;
+        <label><input type="radio" name="radio" value="option3" id="radio3" />
+               Municipality</label>
+      </p>
+
+      <!-- national dropdown -->
+      <select id="dropdown1" name="dropdown1" disabled>
+        <option value="Sweden">Sweden</option>
+      </select>
+
+      <!-- regional dropdown -->
+      <select id="dropdown2" name="dropdown2" disabled>
+        <option value="Dalarnas">Dalarna</option>
+		<option value="Norrbottens">Norrbotten</option>
+        <option value="Västerbottens">Västerbotten</option>
+        <option value="Västra Götalands">Västra Götaland</option>
+        <option value="Hallands">Halland</option>
+        <option value="Värmlands">Värmland</option>
+        <option value="Örebro">Örebro</option>
+        <option value="Kronobergs">Kronoberg</option>
+        <option value="Skåne">Skåne</option>
+        <option value="Jönköpings">Jönköping</option>
+        <option value="Östergötlands">Östergötland</option>
+        <option value="Södermanlands">Södermanland</option>
+        <option value="Kalmar">Kalmar</option>
+        <option value="Uppsala">Uppsala</option>
+        <option value="Västernorrlands">Västernorrland</option>
+        <option value="Gotlands">Gotland</option>
+        <option value="Jämtlands">Jämtland</option>
+        <option value="Gävleborgs">Gävleborg</option>
+        <option value="Blekinge">Blekinge</option>
+        <option value="Västmanlands">Västmanland</option>
+        <option value="Stockholms">Stockholm</option>
+      </select>
+
+      <!-- municipality autocomplete -->
+      <input type="text" id="city" name="city"
+             placeholder="Type municipality" disabled />
+      <p style="font-size:.8rem;color:#64748b">
+        Tip: type three letters for suggestions
+      </p>
+
+      <hr />
+      <h3>Exploit vs. Explore</h3>
+      <p>Choose whether to evaluate existing sites (EXPLOIT) or let CareLocator
+         recommend new ones (EXPLORE):</p>
+
+      <p>
+        <label><input type="radio" id="option1" name="option" value="option10" />
+               EXPLOIT</label>
+        &nbsp;
+        <label><input type="radio" id="option2" name="option" value="option11" />
+               EXPLORE</label>
+      </p>
+
+      <!-- bottom row: Submit (left) and Custom (right) -->
+      <div class="actions">
+        <button type="submit" class="btn-primary">Submit</button>
+        <a href="/custom" class="btn-secondary" role="button" aria-label="Open Custom mode">Custom</a>
+      </div>
+    </form>
+  </div>
+
+  <footer class="footer">
+    &copy; 2025 CareLocator ·
+    <a href="https://github.com/vppaidi/Carelocator" target="_blank">GitHub</a>
+  </footer>
+
+  <!-- jQuery UI autocomplete & control-enable logic ---------------------- -->
+  <script>
+    $(function () {
+      // Full municipality list (truncated here to save space).
+      const cities = [
+        "Örebro",
+        "Kungsbacka",
+        "Örnsköldsvik",
+        "Kungälv",
+        "Bollebygd",
+        "Falkenberg",
+        "Uppsala",
+        "Ale",
+        "Nyköping",
+        "Linköping",
+        "Klippan",
+        "Knivsta",
+        "Övertorneå",
+        "Norrtälje",
+        "Borgholm",
+        "Norrköping",
+        "Österåker",
+        "Grums",
+        "Ludvika",
+        "Orsa",
+        "Ängelholm",
+        "Bromölla",
+        "Sala",
+        "Finspång",
+        "Piteå",
+        "Östhammar",
+        "Söderhamn",
+        "Falun",
+        "Mönsterås",
+        "Håbo",
+        "Eksjö",
+        "Lidköping",
+        "Mark",
+        "Ulricehamn",
+        "Gagnef",
+        "Karlstad",
+        "Orust",
+        "Forshaga",
+        "Sotenäs",
+        "Lycksele",
+        "Ovanåker",
+        "Mellerud",
+        "Karlskrona",
+        "Mora",
+        "Trosa",
+        "Mjölby",
+        "Ekerö",
+        "Vännäs",
+        "Dorotea",
+        "Gnosjö",
+        "Lerum",
+        "Umeå",
+        "Hudiksvall",
+        "Ockelbo",
+        "Ronneby",
+        "Oskarshamn",
+        "Höganäs",
+        "Växjö",
+        "Ystad",
+        "Värnamo",
+        "Sundsvall",
+        "Lindesberg",
+        "Alvesta",
+        "Hagfors",
+        "Nässjö",
+        "Munkfors",
+        "Boden",
+        "Söderköping",
+        "Gotland",
+        "Borlänge",
+        "Gullspång",
+        "Motala",
+        "Mörbylånga",
+        "Skellefteå",
+        "Kumla",
+        "Göteborg",
+        "Gällivare",
+        "Lysekil",
+        "Höör",
+        "Smedjebacken",
+        "Krokom",
+        "Lilla Edet",
+        "Gävle",
+        "Degerfors",
+        "Borås",
+        "Lessebo",
+        "Västerås",
+        "Landskrona",
+        "Hässleholm",
+        "Vansbro",
+        "Nordanstig",
+        "Jokkmokk",
+        "Tranås",
+        "Hällefors",
+        "Sunne",
+        "Bräcke",
+        "Åre",
+        "Tingsryd",
+        "Rättvik",
+        "Simrishamn",
+        "Tierp",
+        "Sölvesborg",
+        "Alingsås",
+        "Järfälla",
+        "Karlskoga",
+        "Svedala",
+        "Vetlanda",
+        "Östra Göinge",
+        "Uddevalla",
+        "Jönköping",
+        "Avesta",
+        "Filipstad",
+        "Berg",
+        "Härryda",
+        "Båstad",
+        "Tomelilla",
+        "Katrineholm",
+        "Askersund",
+        "Karlsborg",
+        "Ljusdal",
+        "Eskilstuna",
+        "Trelleborg",
+        "Gislaved",
+        "Kristianstad",
+        "Sollefteå",
+        "Töreboda",
+        "Hofors",
+        "Hultsfred",
+        "Leksand",
+        "Lekeberg",
+        "Vellinge",
+        "Vallentuna",
+        "Härjedalen",
+        "Malung",
+        "Torsby",
+        "Hylte",
+        "Sandviken",
+        "Helsingborg",
+        "Södertälje",
+        "Essunga",
+        "Olofström",
+        "Varberg",
+        "Säter",
+        "Åstorp",
+        "Luleå",
+        "Arvika",
+        "Kävlinge",
+        "Värmdö",
+        "Aneby",
+        "Kalmar",
+        "Karlshamn",
+        "Ödeshög",
+        "Laholm",
+        "Bollnäs",
+        "Svalöv",
+        "Pajala",
+        "Älvdalen",
+        "Huddinge",
+        "Skurup",
+        "Arvidsjaur",
+        "Strömstad",
+        "Eslöv",
+        "Ånge",
+        "Åsele",
+        "Mariestad",
+        "Tidaholm",
+        "Sävsjö",
+        "Götene",
+        "Boxholm",
+        "Stenungsund",
+        "Tranemo",
+        "Halmstad",
+        "Sjöbo",
+        "Bjuv",
+        "Ljusnarsberg",
+        "Vindeln",
+        "Nybro",
+        "Kramfors",
+        "Trollhättan",
+        "Hörby",
+        "Ljungby",
+        "Kiruna",
+        "Härnösand",
+        "Upplands-Bro",
+        "Burlöv",
+        "Malmö",
+        "Nynäshamn",
+        "Strängnäs",
+        "Storfors",
+        "Markaryd",
+        "Dals-Ed",
+        "Färgelanda",
+        "Nora",
+        "Tjörn",
+        "Storuman",
+        "Haninge",
+        "Robertsfors",
+        "Östersund",
+        "Hallstahammar",
+        "Nykvarn",
+        "Lund",
+        "Västervik",
+        "Hallsberg",
+        "Kalix",
+        "Salem",
+        "Kil",
+        "Uppvidinge",
+        "Mölndal",
+        "Tibro",
+        "Nacka",
+        "Älvkarleby",
+        "Nordmaling",
+        "Vara",
+        "Surahammar",
+        "Kristinehamn",
+        "Staffanstorp",
+        "Timrå",
+        "Bengtsfors",
+        "Älmhult",
+        "Vingåker",
+        "Habo",
+        "Vimmerby",
+        "Munkedal",
+        "Enköping",
+        "Hedemora",
+        "Lidingö",
+        "Tanum",
+        "Heby",
+        "Skövde",
+        "Köping",
+        "Hammarö",
+        "Örkelljunga",
+        "Eda",
+        "Botkyrka",
+        "Danderyd",
+        "Torsås",
+        "Skara",
+        "Vadstena",
+        "Vaggeryd",
+        "Perstorp",
+        "Vårgårda",
+        "Falköping",
+        "Åtvidaberg",
+        "Älvsbyn",
+        "Kinda",
+        "Svenljunga",
+        "Överkalix",
+        "Haparanda",
+        "Partille",
+        "Osby",
+        "Sigtuna",
+        "Fagersta",
+        "Valdemarsvik",
+        "Stockholm",
+        "Herrljunga",
+        "Sollentuna",
+        "Säffle",
+        "Gnesta",
+        "Ydre",
+        "Vilhelmina",
+        "Lomma",
+        "Flen",
+        "Sorsele",
+        "Täby",
+        "Hjo",
+        "Tyresö",
+        "Strömsund",
+        "Mullsjö",
+        "Emmaboda",
+        "Kungsör",
+        "Upplands Väsby",
+        "Högsby",
+        "Vänersborg",
+        "Skinnskatteberg",
+        "Laxå",
+        "Öckerö",
+        "Norberg",
+        "Ragunda",
+        "Solna",
+        "Arboga",
+        "Malå",
+        "Årjäng",
+        "Åmål",
+        "Oxelösund",
+        "Vaxholm",
+        "Norsjö",
+        "Bjurholm",
+        "Grästorp",
+        "Sundbyberg",
+        "Arjeplog"
+      ];
+      $("#city").autocomplete({ source: cities });
+
+      // enable/disable dropdowns based on scope radio --------------------
+      function refreshControls() {
+        $("#dropdown1, #dropdown2, #city").prop("disabled", true);
+        const val = $("input[name='radio']:checked").val();
+        if (val === "option1") $("#dropdown1").prop("disabled", false);
+        if (val === "option2") $("#dropdown2").prop("disabled", false);
+        if (val === "option3") $("#city").prop("disabled", false);
+      }
+      $("input[name='radio']").on("change", refreshControls);
+    });
+  </script>
+</body>
+</html>

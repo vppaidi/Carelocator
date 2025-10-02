@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareLocator · Upload candidate facilities</title>
+
+  <!-- Tailwind-inspired quick palette (no build step) -->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap");
+    :root{
+      --bg:#f3f4f6;        --surface:#ffffff;    --text:#334155;
+      --primary:#0d9488;   --primary-d:#0f766e;
+    }
+    *{box-sizing:border-box;font-family:"Inter",sans-serif}
+    body{margin:0;background:var(--bg);color:var(--text)}
+    .card{max-width:950px;margin:2rem auto;background:var(--surface);
+          border-radius:.75rem;box-shadow:0 4px 12px rgba(0,0,0,.07);
+          padding:2rem 3rem}
+    h1{font-size:1.35rem;font-weight:600;margin:0 0 1.2rem;text-align:center}
+    h2{font-size:1.05rem;font-weight:600;margin:1.5rem 0 .6rem}
+    .btn{padding:.55rem 1.1rem;border:0;border-radius:.5rem;
+         background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-d)}
+    .hidden{display:none}
+    ul{margin:0;padding-left:1.2rem}
+    a{color:var(--primary);text-decoration:underline}
+    .muted{color:#64748b}
+    .row{display:flex;flex-wrap:wrap;gap:1.25rem}
+    .row > div{flex:1 1 260px}
+    fieldset{border:1px solid #e5e7eb;border-radius:.5rem;padding:.75rem 1rem}
+    legend{padding:0 .4rem;font-weight:600;color:#0f172a}
+    select{padding:.35rem .55rem;border:1px solid #cbd5e1;border-radius:.4rem}
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Exploit environmentally optimal locations</h1>
+  <p>Upload a CSV listing your <strong>existing facilities</strong> (mark them
+     with <code>1</code>) and <strong>candidate locations</strong> (mark with
+     <code>0</code>). Addresses or WGS-84 coordinates are both accepted.</p>
+
+  <!-- download examples -->
+  <h2>Need a template?</h2>
+  <ul>
+    <li><a href="{{ url_for('download_example') }}">CSV – addresses</a>
+        <span class="muted">(keep header, paste Google Maps addresses)</span></li>
+    <li><a href="{{ url_for('download_example3') }}">CSV – coordinates</a>
+        <span class="muted">(keep header, supply lat/long)</span></li>
+  </ul>
+
+  <!-- upload form -->
+  <form id="uploadForm" method="POST" action="/upload" enctype="multipart/form-data" style="margin-top:1.5rem">
+
+    <!-- radio choice -->
+    <h2>What does your CSV contain?</h2>
+    <label><input type="radio" name="fileOption" value="optionA" checked> Addresses</label>
+    &nbsp;
+    <label><input type="radio" name="fileOption" value="optionB"> Coordinates</label>
+
+    <!-- file pickers -->
+    <div id="csvA" style="margin-top:1rem">
+      <input type="file" name="fileA" required>
+    </div>
+    <div id="csvB" class="hidden" style="margin-top:1rem">
+      <input type="file" name="fileB">
+    </div>
+
+    <div class="row" style="margin-top:1.25rem">
+      <div>
+        <h2>Number of facilities to locate (0-100)</h2>
+        <input id="facilities" name="facilities" type="number" min="0" max="100" step="1" required value="0">
+        <p class="muted">Enter 0 to analyse only existing sites.</p>
+      </div>
+
+      <div>
+        <h2>Objective mode</h2>
+        <fieldset>
+          <legend>Optimization</legend>
+          <label><input class="form-check-input" type="radio" name="mode" value="pmedian" checked> Efficiency (p-median)</label><br>
+          <label><input class="form-check-input" type="radio" name="mode" value="pcenter"> Equity (p-center)</label>
+        </fieldset>
+        <p class="muted" style="margin-top:.35rem">p-median uses your weights; p-center focuses on the worst-served demand.</p>
+      </div>
+
+      <div>
+        <h2>Operational weights</h2>
+        <label for="weightSystem" class="muted">Choose which attribute to weight by</label><br/>
+        <select id="weightSystem" name="weightSystem">
+          <option value="Population">Population</option>
+          <option value="CNI">CNI</option>
+        </select>
+        <div class="muted" style="margin-top:.35rem">
+          Population uses <code>Pop</code>; CNI uses <code>Weights</code> from <code>datacsv.csv</code>.
+        </div>
+      </div>
+    </div>
+
+    <p class="muted">Computation may take a few minutes for large areas.</p>
+
+    <button type="submit" class="btn">Submit</button>
+  </form>
+</div>
+
+<footer style="text-align:center;font-size:.85rem;color:#64748b;margin:3rem 0">
+  &copy; 2025 CareLocator
+</footer>
+
+<!-- JQuery to toggle file inputs -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $("input[name='fileOption']").on('change', function(){
+    if(this.value==='optionA'){
+      $('#csvA').show(); $('#csvB').hide();
+      $('[name="fileA"]').prop('required',true);
+      $('[name="fileB"]').prop('required',false);
+    }else{
+      $('#csvA').hide(); $('#csvB').show();
+      $('[name="fileA"]').prop('required',false);
+      $('[name="fileB"]').prop('required',true);
+    }
+  });
+</script>
+</body>
+</html>

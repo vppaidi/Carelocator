@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareLocator · Explore optimal locations</title>
+
+  <!-- Libraries -->
+  <link rel="stylesheet"
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+  <!-- Facelift palette -->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap");
+    :root{
+      --bg:#f3f4f6;        --surface:#ffffff;
+      --text:#334155;      --primary:#0d9488;   --primary-d:#0f766e;
+    }
+    *{box-sizing:border-box;font-family:"Inter",sans-serif}
+    body{margin:0;background:var(--bg);color:var(--text)}
+    .card{
+      max-width:950px;margin:2rem auto;background:var(--surface);
+      border-radius:.75rem;padding:2.5rem 3rem;
+      box-shadow:0 4px 12px rgba(0,0,0,.07)
+    }
+    h1{font-size:1.5rem;font-weight:600;margin-bottom:1rem;text-align:center}
+    h3{font-size:1rem;font-weight:600;margin:1.5rem 0 .75rem}
+    #map{height:420px;border-radius:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    .spinner-border{width:3rem;height:3rem;color:var(--primary)}
+    .btn-primary{background:var(--primary);border:0}
+    .btn-primary:hover{background:var(--primary-d)}
+    .muted{color:#64748b}
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Exploring environmentally optimal locations</h1>
+
+  <p class="mb-4">
+    Upload existing facility locations marked <b>1</b> in a CSV if you have
+    them. Leave the file blank if you want brand-new suggestions.
+  </p>
+
+  <h3>Sample CSV files</h3>
+  <ul class="mb-4">
+    <li><a href="{{ url_for('download_example4') }}">Example with addresses</a></li>
+    <li><a href="{{ url_for('download_example2') }}">Example with coordinates</a></li>
+  </ul>
+
+  <form id="myForm" method="POST" action="/recommend" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="facilities">Number of new facilities&nbsp;(1-100)</label>
+      <input type="number" id="facilities" name="facilities"
+             class="form-control w-auto d-inline-block"
+             min="1" max="100" required>
+    </div>
+
+    <!-- Objective mode -->
+    <div class="form-group">
+      <label class="d-block">Objective mode:</label>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="mode" id="modeMedian" value="pmedian" checked>
+        <label class="form-check-label" for="modeMedian">Efficiency (p-median)</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="mode" id="modeCenter" value="pcenter">
+        <label class="form-check-label" for="modeCenter">Equity (p-center)</label>
+      </div>
+    </div>
+
+    <!-- Weight system -->
+    <div class="form-group">
+      <label for="weightSystem">Operational weights</label>
+      <select id="weightSystem" name="weightSystem" class="form-control w-auto d-inline-block">
+        <option value="Population">Population</option>
+        <option value="CNI">CNI</option>
+      </select>
+      <div class="muted">Population uses <code>Pop</code>; CNI uses <code>Weights</code> from <code>datacsv.csv</code>.</div>
+    </div>
+
+    <!-- Upload toggle -->
+    <div class="form-group form-check">
+      <input type="radio" id="enableUpload" name="uploadOption" value="yes"
+             class="form-check-input">
+      <label for="enableUpload" class="form-check-label">Upload CSV</label>
+    </div>
+
+    <!-- CSV type radios -->
+    <div id="csvTypeSection" class="form-group" style="display:none">
+      <label class="d-block">CSV type:</label>
+      <div class="form-check form-check-inline">
+        <input type="radio" id="csvTypeC" name="csvType" value="csv_c"
+               class="form-check-input" checked>
+        <label for="csvTypeC" class="form-check-label">Addresses</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input type="radio" id="csvTypeD" name="csvType" value="csv_d"
+               class="form-check-input">
+        <label for="csvTypeD" class="form-check-label">Coordinates</label>
+      </div>
+    </div>
+
+    <!-- File input -->
+    <div id="fileUploadSection" class="form-group" style="display:none">
+      <label for="csvFile">Choose CSV file</label>
+      <input type="file" id="csvFile" name="csvFile" accept=".csv"
+             class="form-control-file">
+    </div>
+
+    <p class="text-muted">
+      Computation time can be <b>hours</b> for large areas and many facilities.
+    </p>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+    <div id="spinner" class="spinner-border ml-3" role="status"
+         style="display:none"></div>
+  </form>
+
+  <hr class="my-4"/>
+
+  <p>Once you click submit, existing facility locations (if any) will appear on the map:</p>
+  <div id="map"></div>
+</div>
+
+<!-- JS --------------------------------------------------------------------->
+<script>
+$(function(){
+  /* Leaflet map --------------------------------------------------------- */
+  const map = L.map('map').setView([20,0],2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+    .addTo(map);
+
+  /* Toggle upload sections --------------------------------------------- */
+  $('#enableUpload').on('change',function(){
+    const show = $(this).is(':checked');
+    $('#csvTypeSection, #fileUploadSection').toggle(show);
+  });
+
+  /* AJAX submit --------------------------------------------------------- */
+  $('#myForm').on('submit',function(e){
+    e.preventDefault();
+    $('#spinner').show();
+
+    $.ajax({
+      type:'POST',
+      url:'/recommend',
+      data:new FormData(this),
+      processData:false,
+      contentType:false,
+      success:function(data){
+        const jobId = data.job_id,
+              addr  = data.addr || [];
+
+        // plot markers
+        const all = [];
+        addr.forEach(a=>{
+          const m = L.marker([+a.lat,+a.lon]).addTo(map);
+          all.push([+a.lat,+a.lon]);
+        });
+        if(all.length) map.fitBounds(all);
+
+        // poll job status
+        const poll = setInterval(()=>{
+          $.getJSON(`/task-status/${jobId}`,s=>{
+            if(s.state==='finished'){
+              clearInterval(poll);
+              window.location=`/result2/${jobId}`;
+            }else if(s.state==='failed'){
+              clearInterval(poll);
+              $('#spinner').hide();
+              $.getJSON(`/fetch-error/${jobId}`,e=>{
+                alert('Task failed: '+e.error_message);
+              });
+            }
+          });
+        },5000);
+      },
+      error:function(x,s,e){
+        $('#spinner').hide();
+        alert('Upload error: '+e);
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>

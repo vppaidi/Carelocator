@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Result</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <style>
+        #mapid { height: 600px; }
+    </style>
+  </head>
+  <body>
+    <h1>Plot of facilities on the map</h1>
+
+         <!-- Error Message Display -->
+         <div id="errorMessage" style="color: red; display: none;"></div>
+         <p style="background-color:powderblue;">Allocated Facilities </p>
+         
+         <p id="printedData">
+         <br>
+         {{data | safe }}
+         </p>
+	
+	<button onclick="exportResults()">Export Results</button>
+	
+	 		
+    <div id="mapid"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+   
+    <script>
+            var errorMessage = "{{ error_message }}";
+            if (errorMessage) {
+              // Display the error message
+              document.getElementById("errorMessage").style.display = "block";
+              document.getElementById("errorMessage").textContent = errorMessage;
+            }
+                  
+            function exportResults() {
+                var data = "Allocated Facilities\n\n"; // Start with the header
+                
+                // Append printedData to the data string
+                var printedData = document.getElementById("printedData").textContent;
+                data += printedData + "\n\n"; // Add a couple of newline characters for separation
+                    
+                markers.forEach(function(marker) {
+                    // Assuming each marker has a popup with text "Facility[index]: lat,lon"
+                    var popupText = marker.getPopup().getContent();
+                    data += popupText + "\n"; // Add each marker info to the data string
+                });
+
+                // Create a blob of the data
+                var blob = new Blob([data], { type: 'text/plain' });
+                var url = window.URL.createObjectURL(blob);
+            
+                // Create a link element, click it, and then delete it
+                var a = document.createElement("a");
+                a.style.display = "none";
+                document.body.appendChild(a);
+            
+                a.href = url;
+                a.download = "results.txt";
+                a.click();
+            
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
+        
+        
+        var map = L.map('mapid').setView([54.5260, 15.2551], 4);  // Initialize map
+    
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 12
+        }).addTo(map);
+    
+        var markers = [];
+
+        {% for address in addresses2 %}
+            {% if address.idx not in nearest_origin_indexes %}
+                var markerIcon = L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    iconSize: [25, 41],  // size of the icon
+                    iconAnchor: [12, 41],  // point of the icon which will correspond to marker's location
+                    popupAnchor: [0, -41]  // point from which the popup should open relative to the iconAnchor
+                });
+        
+                var marker = L.marker([{{address.lat}}, {{address.lon}}], {icon: markerIcon}).addTo(map);
+            {% else %}
+                var marker = L.marker([{{address.lat}}, {{address.lon}}]).addTo(map);
+            {% endif %}
+            
+            marker.bindPopup("Facility: {{address.idx}}: {{address.lat}},{{address.lon}}");
+            markers.push(marker);
+            
+            // Use the server-side passed radius value
+            var circle = L.circle([{{address.lat}}, {{address.lon}}], {
+                color: 'blue',      // Set the circle color
+                fillColor: '#30f',  // Set the fill color
+                fillOpacity: 0.2,   // Set fill opacity
+                radius: {{radius}}  // Use the radius from server side
+            }).addTo(map);
+        {% endfor %}
+    
+        if (markers.length > 0) {
+            var group = new L.LatLngBounds(markers.map(m => m.getLatLng()));
+            map.fitBounds(group); // Adjust the value 10 to your desired max zoom level
+        }
+        
+        
+    </script>
+    
+</html>

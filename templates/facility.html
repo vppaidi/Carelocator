@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}CareLocator · Upload Preferred locations{% endblock %}
+{% block content %}
+<section class="container mx-auto max-w-4xl px-4 py-8 grid gap-8">
+  <!-- Heading ---------------------------------------------------------- -->
+  <header class="text-center space-y-2">
+    <h1 class="text-2xl font-semibold tracking-tight">
+      Decision&nbsp;Support&nbsp;System &ndash; preferred / existing facilities
+    </h1>
+    <p class="text-muted-foreground max-w-2xl mx-auto">
+      Upload your <strong>CSV</strong> that flags the facilities you want to
+      lock‑in or test for removal. The file must keep the same header names and
+      row order as the retail‑location file you just uploaded.
+    </p>
+  </header>
+
+  <!-- Alert that locations are already loaded ------------------------- -->
+  <div class="rounded-xl border border-primary-200 bg-primary-50/50 p-4 text-sm text-primary-800">
+    ✔ Retail locations have been uploaded. Continue with step&nbsp;3.
+  </div>
+
+  <!-- Upload form ------------------------------------------------------ -->
+  <form method="POST" action="{{ url_for('facility') }}" enctype="multipart/form-data"
+        class="flex flex-col gap-4 rounded-xl border p-6 shadow-sm bg-white/70">
+    <label class="block">
+      <span class="font-medium">Choose CSV file</span>
+      <input type="file" name="file" accept=".csv"
+             class="mt-2 block w-full rounded-lg border border-gray-300 file:mr-4 file:rounded-md file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-700" />
+    </label>
+    <button type="submit" class="btn-primary self-start">Upload</button>
+  </form>
+
+  <!-- Example file section -------------------------------------------- -->
+  <section class="space-y-4">
+    <h2 class="text-lg font-semibold">Example CSV</h2>
+    <p class="text-sm text-slate-600 max-w-prose">
+      Leave the header and file name unchanged and set the <code>preferred</code>
+      column to <code>1</code> (keep) or <code>0</code> (candidate) for each row.
+    </p>
+    <div class="rounded-md bg-slate-50 p-4 text-sm leading-relaxed">
+      <p><strong>Scenario&nbsp;1:</strong> four locations total, you want the
+      DSS to pick the optimal site among the <em>last&nbsp;two</em>.</p>
+      <ul class="list-disc ml-6 mb-2">
+        <li>CSV column → <code>1&nbsp;1&nbsp;0&nbsp;0</code></li>
+        <li>Next step&rsquo;s&nbsp;<kbd>P&nbsp;Value</kbd> = <code>3</code></li>
+      </ul>
+      <p><strong>Scenario&nbsp;2:</strong> five existing locations, you plan to
+      <em>close&nbsp;two</em>.</p>
+      <ul class="list-disc ml-6">
+        <li>CSV column → <code>0&nbsp;0&nbsp;0&nbsp;0&nbsp;0</code></li>
+        <li><kbd>P&nbsp;Value</kbd> = <code>3</code></li>
+      </ul>
+    </div>
+    <p>
+      <a href="{{ url_for('download_facility') }}" class="link-primary inline-flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 4v12m0 0l-3-3m3 3l3-3m-6 0a9 9 0 1012 0" />
+        </svg>
+        Download example file
+      </a>
+    </p>
+  </section>
+</section>
+{% endblock %}
