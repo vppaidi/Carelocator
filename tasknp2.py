@@ -16,7 +16,7 @@ import numpy as np
 import pulp
 from pulp import HiGHS_CMD
 from spopt.locate import PMedian, PCenter
-
+import rq
 import osmnx as ox
 import networkx as nx
 import pandas as pd
@@ -166,4 +166,5 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
     except Exception as e:
         error_message = f"Unexpected error: {str(e)}"
         redis_conn.set(f"error_for_job_{job_id}", error_message)
+
         return "Task failed"
