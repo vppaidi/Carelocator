@@ -22,7 +22,7 @@ import numpy as np
 import requests
 import re
 import uuid
-
+import rq
 from rq import Queue
 from redis import Redis
 from rq.job import Job
