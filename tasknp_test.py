@@ -9,7 +9,7 @@ from flask import Flask, render_template, session, redirect, url_for, session, r
 # from flask_sqlalchemy import SQLAlchemy
 # from sqlalchemy import text
 # from sqlalchemy import create_engine
-
+import rq
 import os
 import pandas as pd
 import numpy as np
@@ -212,3 +212,4 @@ def recommend_task(selected_dropdown, P_FACILITIES, origins, wei, addresses, mod
         error_message = f"Unexpected error: There is an exception raised. {str(e)}"
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
+
