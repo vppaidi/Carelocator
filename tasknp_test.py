@@ -36,14 +36,9 @@ from multiprocessing import Pool, cpu_count
 from worker import calculate_path
 from io import StringIO
 
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-REDIS_DB = int(os.getenv('REDIS_DB', 0))
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
-REDIS_SSL = os.getenv('REDIS_SSL', 'False') == 'True'
-
-redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, ssl=REDIS_SSL)
-
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+# Redis.from_url understands rediss:// and TLS on port 6380
+redis_conn = Redis.from_url(REDIS_URL)
 
 def recommend_task(selected_dropdown, P_FACILITIES, origins, wei, addresses, mode="pmedian"):
     """
@@ -212,4 +207,5 @@ def recommend_task(selected_dropdown, P_FACILITIES, origins, wei, addresses, mod
         error_message = f"Unexpected error: There is an exception raised. {str(e)}"
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
+
 
