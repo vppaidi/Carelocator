@@ -33,14 +33,9 @@ from redis import Redis
 from rq import get_current_job
 
 
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-REDIS_DB = int(os.getenv('REDIS_DB', 0))
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
-REDIS_SSL = os.getenv('REDIS_SSL', 'False') == 'True'
-
-redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, ssl=REDIS_SSL)
-
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+# Redis.from_url understands rediss:// and TLS on port 6380
+redis_conn = Redis.from_url(REDIS_URL)
 
 def pfac_task(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES, origins, wei, addresses, mode="pmedian"):
     """
@@ -230,5 +225,6 @@ def pfac_task(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES, orig
         print("This is an exception***************************")
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
+
 
 
