@@ -14,7 +14,7 @@ import os
 import pandas as pd
 import numpy as np
 import pulp
-from pulp import HiGHS_CMD
+from solvers import highs_solver
 from spopt.locate import PMedian, PCenter  # <-- add PCenter
 
 import osmnx as ox
@@ -118,7 +118,7 @@ def recommend_task(selected_dropdown, P_FACILITIES, origins, wei, addresses, mod
         cm = np.where(cm < 0, 0.0, cm)
 
         # ---------- Solve ----------
-        solver = HiGHS_CMD(msg=False)
+        solver = highs_solver()
         mode = (mode or "pmedian").lower()
 
         if mode == "pmedian":
@@ -207,5 +207,6 @@ def recommend_task(selected_dropdown, P_FACILITIES, origins, wei, addresses, mod
         error_message = f"Unexpected error: There is an exception raised. {str(e)}"
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
+
 
 
