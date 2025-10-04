@@ -56,10 +56,15 @@ jobs:
           client-id: ${{ secrets.__clientidsecretname__ }}
           tenant-id: ${{ secrets.__tenantidsecretname__ }}
           subscription-id: ${{ secrets.__subscriptionidsecretname__ }}
+           
+      - name: Make highs binary executable
+        run: chmod +x app/bin/highs || chmod +x bin/highs || true
 
-      - name: Deploy to Azure Web App
+      - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
         with:
-          app-name: 'carelocator'      # must match your Web App name in the portal
+          app-name: 'carelocator'
           slot-name: 'Production'
-          package: app                 # deploy the artifact we just downloaded
+          package: app
+          enable-oryx-build: true
