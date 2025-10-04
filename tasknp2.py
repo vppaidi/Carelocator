@@ -14,7 +14,7 @@ import os
 import pandas as pd
 import numpy as np
 import pulp
-from pulp import HiGHS_CMD
+from solvers import highs_solver
 from spopt.locate import PMedian, PCenter
 import rq
 import osmnx as ox
@@ -60,7 +60,7 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
         COTWO_PER_KM = 0.15  # kg per km
         cm = cost_matrix * COTWO_PER_KM
 
-        solver = HiGHS_CMD(msg=False)  # <-- use HiGHS_CMD directly
+        solver = highs_solver()  # <-- use HiGHS_CMD directly
 
         # ---------- solve ----------
         mode = (mode or "pmedian").lower()
@@ -164,4 +164,5 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
         redis_conn.set(f"error_for_job_{job_id}", error_message)
 
         return "Task failed"
+
 
