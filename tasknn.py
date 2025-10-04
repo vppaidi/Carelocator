@@ -14,7 +14,7 @@ import os
 import pandas as pd
 import numpy as np
 import pulp
-from pulp import HiGHS_CMD
+from solvers import highs_solver
 from spopt.locate import PMedian, PCenter  # <-- add PCenter
 import rq
 import osmnx as ox
@@ -123,7 +123,7 @@ def pfac_task(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES, orig
         cost_matrix = np.where(od_matrix < 0, 0.0, od_matrix) * COTWO_PER_KM
 
         # --- Solve ---
-        solver = HiGHS_CMD(msg=False)
+        solver = highs_solver()
         mode = (mode or "pmedian").lower()
 
         if mode == "pmedian":
@@ -225,6 +225,7 @@ def pfac_task(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES, orig
         print("This is an exception***************************")
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
+
 
 
 
