@@ -14,7 +14,7 @@ import os
 import pandas as pd
 import numpy as np
 import pulp
-from pulp import HiGHS_CMD
+from solvers import highs_solver
 from spopt.locate import PMedian, PCenter  # <-- add PCenter
 # redis cloud loading
 from dotenv import load_dotenv
@@ -134,7 +134,7 @@ def pfac_task2(
         cost_matrix = cm[:, indices]  # shape: (n_clients, n_candidates)
 
         # ---------- Solve ----------
-        solver = HiGHS_CMD(msg=False)
+        solver = highs_solver()
         mode = (mode or "pmedian").strip().lower()
 
         if mode == "pmedian":
@@ -232,5 +232,6 @@ def pfac_task2(
         error_message = f"Unexpected error: {str(e)}"
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
+
 
 
