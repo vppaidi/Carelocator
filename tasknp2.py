@@ -14,9 +14,9 @@ import os
 import pandas as pd
 import numpy as np
 import pulp
-from solvers import highs_solver
 from spopt.locate import PMedian, PCenter
-import rq
+from solvers import highs_solver
+
 import osmnx as ox
 import networkx as nx
 import pandas as pd
@@ -34,8 +34,8 @@ from redis import Redis
 from rq import get_current_job
 
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
-# Redis.from_url understands rediss:// and TLS on port 6380
+REDIS_URL = os.environ.get("REDIS_URL")
+# TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
 
 def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="pmedian"):
@@ -162,7 +162,4 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
     except Exception as e:
         error_message = f"Unexpected error: {str(e)}"
         redis_conn.set(f"error_for_job_{job_id}", error_message)
-
         return "Task failed"
-
-

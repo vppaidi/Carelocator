@@ -9,7 +9,7 @@ from flask import Flask, render_template, session, redirect, url_for, session, r
 # from flask_sqlalchemy import SQLAlchemy
 # from sqlalchemy import text
 # from sqlalchemy import create_engine
-import rq
+
 import os
 import pandas as pd
 import numpy as np
@@ -36,11 +36,12 @@ from rq import get_current_job
 from worker3 import haversine
 from io import StringIO
 
+
 # Load environment variables from .env file
 # load_dotenv()
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
-# Redis.from_url understands rediss:// and TLS on port 6380
+REDIS_URL = os.environ.get("REDIS_URL")
+# TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
 
 def pfac_task2(
@@ -232,6 +233,3 @@ def pfac_task2(
         error_message = f"Unexpected error: {str(e)}"
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
-
-
-

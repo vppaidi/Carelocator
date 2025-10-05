@@ -2,25 +2,25 @@ import os
 from redis import Redis
 from rq import Worker, Queue, Connection
 
-# Configuration for Redis connection
-REDIS_HOST = os.getenv('REDIS_HOST')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))  # Default to port 6379 if not specified
-REDIS_DB = int(os.getenv('REDIS_DB', 0))         # Default to DB 0 if not specified
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
-REDIS_SSL = os.getenv('REDIS_SSL', 'False').lower() == 'true'  # Convert to a boolean
+def get_redis_connection():
+    # Primary: lower-case env var per your setup
+    url = os.getenv("redis_url")
+    # Backup: allow uppercase if it ever exists (won't override the primary)
+    if not url:
+        url = os.getenv("REDIS_URL")
+    if not url:
+        url = "redis://localhost:6379/0"
+        print("[bkworker] WARNING: 'redis_url' not set; defaulting to", url)
 
-# Establish the Redis connection
-if REDIS_SSL:
-    conn = Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, ssl=True)
-else:
-    conn = Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD)
+    # Use Redis URL directly; enable SSL if scheme is rediss://
+    return Redis.from_url(url, ssl=url.lower().startswith("rediss://"))
 
-# Main execution when the script is run
-if __name__ == '__main__':
-    with Connection(conn):
-        try:
-            print("Starting bkworker...")
-            bkworker = Worker(Queue('default'))
-            bkworker.work()
-        except Exception as e:
-            print(f"Error: {e}")
+if __name__ == "__main__":
+    queues_csv = os.getenv("QUEUES", "default")
+    queue_names = [q.strip() for q in queues_csv.split(",") if q.strip()]
+    worker_name = os.getenv("WORKER_NAME")  # optional label for the process
+
+    print(f"[bkworker] Queues={queue_names} | WorkerName={worker_name or '-'}")
+    with Connection(get_redis_connection()):
+        worker = Worker([Queue(name) for name in queue_names], name=worker_name)
+        worker.work()

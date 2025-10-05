@@ -9,7 +9,7 @@ from flask import Flask, render_template, session, redirect, url_for, session, r
 # from flask_sqlalchemy import SQLAlchemy
 # from sqlalchemy import text
 # from sqlalchemy import create_engine
-import rq
+
 import os
 import pandas as pd
 import numpy as np
@@ -36,8 +36,8 @@ from io import StringIO
 # from worker import worker_function
 # from multiprocessing import Pool, cpu_count
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
-# Redis.from_url understands rediss:// and TLS on port 6380
+REDIS_URL = os.environ.get("REDIS_URL")
+# TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
 
 def recommend_task3(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES, origins, wei, addresses, mode="pmedian"):
@@ -253,6 +253,3 @@ def recommend_task3(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES
         print("This is an exception***************************")
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
-
-
-

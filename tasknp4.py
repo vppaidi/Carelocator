@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import pulp
-from solvers import highs_solver
+
 from spopt.locate import PMedian, PCenter  # p-median & p-center
 import osmnx as ox
 import networkx as nx
@@ -11,7 +11,6 @@ import geopandas as gpd
 from shapely.geometry import Point
 import time
 import io
-import rq
 import csv
 import datetime
 import redis
@@ -25,10 +24,11 @@ from worker import calculate_path
 from worker3 import haversine            # <-- haversine for nearest mapping
 from io import StringIO
 import traceback
+from solvers import highs_solver
 
 # --- Redis connection ---------------------------------------------------------
-REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
-# Redis.from_url understands rediss:// and TLS on port 6380
+REDIS_URL = os.environ.get("REDIS_URL")
+# TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
 
 def convert_numpy_types(obj):
@@ -304,6 +304,3 @@ def recommend_task4(
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         print(error_message)
         return "Task failed"
-
-
-
