@@ -22,7 +22,7 @@ import numpy as np
 import requests
 import re
 import uuid
-import rq
+
 from rq import Queue
 from redis import Redis
 from rq.job import Job
@@ -54,10 +54,16 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 # -----------------------------------------------------------------------------
 # Unified Redis connection (for web + workers) via REDIS_URL
 # -----------------------------------------------------------------------------
-REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+
+REDIS_URL = os.environ.get("REDIS_URL")
+if not REDIS_URL:
+    raise RuntimeError("REDIS_URL is not set. Add it in Azure → Configuration → Application settings.")
+
+# TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
+
 queue = Queue(connection=redis_conn)
-print(f"[DSS] Using Redis at {REDIS_URL}")
+print("[DSS] Using Redis URL ")
 
 # -----------------------------------------------------------------------------
 # Server-side sessions in Redis (optional but recommended for multi-user)
@@ -82,13 +88,16 @@ GITHUB_RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO
 LOCATIONS_URL = f"{GITHUB_RAW_BASE}/datacsv.csv"
 locations = pd.read_csv(LOCATIONS_URL, delimiter=';', low_memory=False)
 
-predata = [
-    'Västmanlands','Västernorrlands','Sweden','Stockholms','Västra Götalands',
-    'Göteborg', 'Kalmar', 'Dalarnas', 'Södermanlands', 'Östergötlands',
-    'Jönköpings', 'Skåne', 'Kronobergs', 'Örebro', 'Värmlands', 'Hallands',
-    'Västerbottens', 'Norrbottens', 'Uppsala', 'Stockholm', 'Linköping', 'Stockholms',
-    'Borlänge', 'Falun'
-]
+predata = ['Blekinge.csv', 'Borlänge.csv', 'Borås.csv', 'Dalarnas.csv', 
+            'Eskilstuna.csv', 'Falun.csv', 'Gotlands.csv', 'Gävle.csv', 'Gävleborgs.csv', 'Göteborg.csv', 
+            'Hallands.csv', 'Halmstad.csv', 'Haninge.csv', 'Helsingborg.csv', 'Huddinge.csv', 'Jämtlands.csv', 'Järfälla.csv', 
+            'Jönköping.csv', 'Jönköpings.csv', 'Kalmar.csv', 'Karlskrona.csv', 'Karlstad.csv', 'Kristianstad.csv', 'Kronobergs.csv', 
+            'Kungsbacka.csv', 'Linköping.csv', 'Ludvika.csv', 'Luleå.csv', 'Lund.csv', 'Malmö.csv', 'Mölndal.csv', 'Nacka.csv', 
+            'Norrbottens.csv', 'Norrköping.csv', 'Skellefteå.csv', 'Skåne.csv', 'Sollentuna.csv', 'Solna.csv', 'Stockholm.csv', 
+            'Stockholms.csv', 'Sundsvall.csv', 'Sweden.csv', 'Södermanlands.csv', 'Södertälje.csv', 'Täby.csv', 'Umeå.csv', 'Uppsala.csv', 
+            'Värmlands.csv', 'Västerbottens.csv', 'Västernorrlands.csv', 'Västerås.csv', 'Västmanlands.csv', 'Västra Götalands.csv', 
+            'Växjö.csv', 'Örebro.csv', 'Östergötlands.csv']
+
 
 # -----------------------------------------------------------------------------
 # WTForm placeholder
