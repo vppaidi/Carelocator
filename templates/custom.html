@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareLocator · Custom</title>
+
+  <!-- jQuery & jQuery UI (match index.html look/feel) -->
+  <link rel="stylesheet"
+        href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+  <!-- Facelift palette (same as index.html) -->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap");
+
+    :root{
+      --bg:#f3f4f6;        --surface:#ffffff;
+      --text:#334155;      --primary:#0d9488;   --primary-d:#0f766e;
+    }
+    *{box-sizing:border-box;font-family:"Inter",sans-serif}
+    body{margin:0;background:var(--bg);color:var(--text)}
+    .card{
+      max-width:950px;margin:2rem auto;background:var(--surface);
+      border-radius:.75rem;padding:2.0rem 2.4rem;
+      box-shadow:0 4px 12px rgba(0,0,0,.07)
+    }
+    h1{font-size:1.35rem;font-weight:600;margin-bottom:1rem}
+    h3{font-size:1rem;font-weight:600;margin:1.25rem 0 .75rem}
+    .btn-primary{
+      background:var(--primary);border:0;color:#fff;
+      padding:.6rem 1.2rem;border-radius:.5rem;font-weight:600;cursor:pointer
+    }
+    .btn-primary:hover{background:var(--primary-d)}
+    .muted{color:#64748b;font-size:.9rem}
+    .form-row{display:flex;gap:1rem;flex-wrap:wrap}
+    .form-row > div{flex:1 1 260px}
+    select, input[type="text"], input[type="number"]{
+      width:100%;padding:.55rem .65rem;border:1px solid #cbd5e1;border-radius:.5rem
+    }
+
+    /* Progress overlay -------------------------------------------------- */
+    .overlay{
+      position:fixed; inset:0; background:rgba(15,23,42,.45);
+      display:none; align-items:center; justify-content:center; z-index:9999;
+    }
+    .overlay .panel{
+      width:520px; max-width:92vw; background:#fff; border-radius:.75rem;
+      box-shadow:0 20px 40px rgba(0,0,0,.25);
+      padding:1.25rem 1.25rem 1.1rem;
+    }
+    .overlay h2{
+      margin:0 0 .25rem; font-size:1.05rem; font-weight:600; color:#0f172a;
+    }
+    .overlay .status{
+      color:#475569; font-size:.95rem; margin-bottom:.75rem;
+    }
+    .progress{
+      width:100%; height:12px; background:#e5e7eb; border-radius:999px;
+      overflow:hidden; margin-top:.25rem;
+    }
+    .progress .bar{
+      height:100%; width:0%; background:var(--primary);
+      transition:width .35s ease;
+    }
+    .tiny{
+      margin-top:.5rem; color:#64748b; font-size:.85rem;
+    }
+    .dim{ opacity:.6; pointer-events:none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Custom weighting & objective</h1>
+
+    <form id="customForm" method="POST" action="/custom/run" enctype="multipart/form-data">
+      <!-- Scope: identical controls to index.html ---------------------->
+      <h3>Geographical scope</h3>
+      <p>
+        <label><input type="radio" name="radio" value="option1" id="radio1" /> National</label>
+        &nbsp;
+        <label><input type="radio" name="radio" value="option2" id="radio2" /> Regional</label>
+        &nbsp;
+        <label><input type="radio" name="radio" value="option3" id="radio3" /> Municipality</label>
+      </p>
+
+      <!-- national dropdown -->
+      <select id="dropdown1" name="dropdown1" disabled>
+        <option value="Sweden">Sweden</option>
+      </select>
+
+      <!-- regional dropdown -->
+      <select id="dropdown2" name="dropdown2" disabled>
+        <option value="Norrbottens">Norrbotten</option>
+        <option value="Dalarnas">Dalarna</option>
+        <option value="Västerbottens">Västerbotten</option>
+        <option value="Västra Götalands">Västra Götaland</option>
+        <option value="Hallands">Halland</option>
+        <option value="Värmlands">Värmland</option>
+        <option value="Örebros">Örebro</option>
+        <option value="Kronobergs">Kronoberg</option>
+        <option value="Skåne">Skåne</option>
+        <option value="Jönköpings">Jönköping</option>
+        <option value="Östergötlands">Östergötland</option>
+        <option value="Södermanlands">Södermanland</option>
+        <option value="Kalmars">Kalmar</option>
+        <option value="Uppsalas">Uppsala</option>
+        <option value="Västernorrlands">Västernorrland</option>
+        <option value="Gotlands">Gotland</option>
+        <option value="Jämtlands">Jämtland</option>
+        <option value="Gävleborgs">Gävleborg</option>
+        <option value="Blekinge">Blekinge</option>
+        <option value="Västmanlands">Västmanland</option>
+        <option value="Stockholms">Stockholm</option>
+      </select>
+
+      <!-- municipality autocomplete -->
+      <input type="text" id="city" name="city"
+             placeholder="Type municipality" disabled />
+      <p class="muted" style="margin-top:.35rem">Tip: type three letters for suggestions</p>
+
+      <hr/>
+
+      <!-- (A) OPTIONAL: Custom multipliers CSV -------------------------->
+      <h3>Custom multipliers (optional)</h3>
+      <div class="form-row">
+        <div>
+          <div class="form-check">
+            <input type="checkbox" id="multEnable" class="form-check-input">
+            <label for="multEnable" class="form-check-label">
+              Upload CSV of custom multipliers (<em>name, factor</em>)
+            </label>
+          </div>
+
+          <div id="multUploadSection" style="display:none; margin-top:.5rem">
+            <input type="file" id="multCsv" name="multCsv" accept=".csv" />
+            <p class="muted" style="margin-top:.35rem">
+              Name can be Region/Municipality/DeSO (based on scope). “factor” multiplies chosen weights.
+              If not provided, default factor = 1 (weights unchanged).
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label for="weightSystem">Operational weights</label>
+          <select id="weightSystem" name="weightSystem" required>
+            <option value="Population">Population</option>
+            <option value="CNI">CNI</option>
+          </select>
+          <p class="muted" style="margin-top:.35rem">
+            Choose Population (<code>Pop</code>) or CNI (<code>Weights</code>) from <code>datacsv.csv</code>.
+          </p>
+        </div>
+      </div>
+
+      <hr/>
+
+      <!-- (B) OPTIONAL: Existing facilities upload (like /recommend) ---->
+      <h3>Existing facilities (optional)</h3>
+      <div class="form-row">
+        <div>
+          <div class="form-check">
+            <input type="checkbox" id="siteEnable" class="form-check-input">
+            <label for="siteEnable" class="form-check-label">Upload CSV of existing facilities</label>
+          </div>
+
+          <div id="siteUploadSection" style="display:none; margin-top:.5rem">
+            <label class="d-block">CSV type:</label>
+            <div style="margin-bottom:.35rem">
+              <label><input type="radio" name="siteCsvType" value="csv_c" checked> Addresses</label>
+              &nbsp;&nbsp;
+              <label><input type="radio" name="siteCsvType" value="csv_d"> Coordinates</label>
+            </div>
+            <input type="file" id="siteCsv" name="siteCsv" accept=".csv" />
+            <p class="muted" style="margin-top:.35rem">
+              For addresses, include a column named <code>Address</code> and (optionally) a
+              <code>facility</code> flag (1 = already open).
+              For coordinates, include columns <code>Latitude</code> and <code>Longitude</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <hr/>
+
+      <!-- Objective & p ----------------------------------------------- -->
+      <div class="form-row">
+        <div>
+          <label>Objective</label><br/>
+          <label><input type="radio" name="mode" value="pmedian" checked /> p-median (efficiency)</label><br/>
+          <label><input type="radio" name="mode" value="pcenter" /> p-center (equity)</label>
+        </div>
+
+        <div>
+          <label for="facilities"># new facilities (1–100)</label>
+          <input type="number" id="facilities" name="facilities" min="1" max="100" value="3" required />
+        </div>
+      </div>
+
+      <div style="margin-top:1rem">
+        <button type="submit" class="btn-primary" id="submitBtn">Submit</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Progress overlay -->
+  <div class="overlay" id="progressOverlay" aria-hidden="true">
+    <div class="panel">
+      <h2 id="progressTitle">Submitting…</h2>
+      <div class="status" id="progressStatus">Uploading and starting your job…</div>
+      <div class="progress" aria-live="polite" aria-label="Job progress">
+        <div class="bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <div class="tiny" id="progressHint">Do not close this tab. We’ll redirect when it’s done.</div>
+    </div>
+  </div>
+
+  <script>
+    // Municipality list (trimmed; add full list if needed)
+    const cities = ["Örebro",
+        "Kungsbacka",
+        "Örnsköldsvik",
+        "Kungälv",
+        "Bollebygd",
+        "Falkenberg",
+        "Uppsala",
+        "Ale",
+        "Nyköping",
+        "Linköping",
+        "Klippan",
+        "Knivsta",
+        "Övertorneå",
+        "Norrtälje",
+        "Borgholm",
+        "Norrköping",
+        "Österåker",
+        "Grums",
+        "Ludvika",
+        "Orsa",
+        "Ängelholm",
+        "Bromölla",
+        "Sala",
+        "Finspång",
+        "Piteå",
+        "Östhammar",
+        "Söderhamn",
+        "Falun",
+        "Mönsterås",
+        "Håbo",
+        "Eksjö",
+        "Lidköping",
+        "Mark",
+        "Ulricehamn",
+        "Gagnef",
+        "Karlstad",
+        "Orust",
+        "Forshaga",
+        "Sotenäs",
+        "Lycksele",
+        "Ovanåker",
+        "Mellerud",
+        "Karlskrona",
+        "Mora",
+        "Trosa",
+        "Mjölby",
+        "Ekerö",
+        "Vännäs",
+        "Dorotea",
+        "Gnosjö",
+        "Lerum",
+        "Umeå",
+        "Hudiksvall",
+        "Ockelbo",
+        "Ronneby",
+        "Oskarshamn",
+        "Höganäs",
+        "Växjö",
+        "Ystad",
+        "Värnamo",
+        "Sundsvall",
+        "Lindesberg",
+        "Alvesta",
+        "Hagfors",
+        "Nässjö",
+        "Munkfors",
+        "Boden",
+        "Söderköping",
+        "Gotland",
+        "Borlänge",
+        "Gullspång",
+        "Motala",
+        "Mörbylånga",
+        "Skellefteå",
+        "Kumla",
+        "Göteborg",
+        "Gällivare",
+        "Lysekil",
+        "Höör",
+        "Smedjebacken",
+        "Krokom",
+        "Lilla Edet",
+        "Gävle",
+        "Degerfors",
+        "Borås",
+        "Lessebo",
+        "Västerås",
+        "Landskrona",
+        "Hässleholm",
+        "Vansbro",
+        "Nordanstig",
+        "Jokkmokk",
+        "Tranås",
+        "Hällefors",
+        "Sunne",
+        "Bräcke",
+        "Åre",
+        "Tingsryd",
+        "Rättvik",
+        "Simrishamn",
+        "Tierp",
+        "Sölvesborg",
+        "Alingsås",
+        "Järfälla",
+        "Karlskoga",
+        "Svedala",
+        "Vetlanda",
+        "Östra Göinge",
+        "Uddevalla",
+        "Jönköping",
+        "Avesta",
+        "Filipstad",
+        "Berg",
+        "Härryda",
+        "Båstad",
+        "Tomelilla",
+        "Katrineholm",
+        "Askersund",
+        "Karlsborg",
+        "Ljusdal",
+        "Eskilstuna",
+        "Trelleborg",
+        "Gislaved",
+        "Kristianstad",
+        "Sollefteå",
+        "Töreboda",
+        "Hofors",
+        "Hultsfred",
+        "Leksand",
+        "Lekeberg",
+        "Vellinge",
+        "Vallentuna",
+        "Härjedalen",
+        "Malung",
+        "Torsby",
+        "Hylte",
+        "Sandviken",
+        "Helsingborg",
+        "Södertälje",
+        "Essunga",
+        "Olofström",
+        "Varberg",
+        "Säter",
+        "Åstorp",
+        "Luleå",
+        "Arvika",
+        "Kävlinge",
+        "Värmdö",
+        "Aneby",
+        "Kalmar",
+        "Karlshamn",
+        "Ödeshög",
+        "Laholm",
+        "Bollnäs",
+        "Svalöv",
+        "Pajala",
+        "Älvdalen",
+        "Huddinge",
+        "Skurup",
+        "Arvidsjaur",
+        "Strömstad",
+        "Eslöv",
+        "Ånge",
+        "Åsele",
+        "Mariestad",
+        "Tidaholm",
+        "Sävsjö",
+        "Götene",
+        "Boxholm",
+        "Stenungsund",
+        "Tranemo",
+        "Halmstad",
+        "Sjöbo",
+        "Bjuv",
+        "Ljusnarsberg",
+        "Vindeln",
+        "Nybro",
+        "Kramfors",
+        "Trollhättan",
+        "Hörby",
+        "Ljungby",
+        "Kiruna",
+        "Härnösand",
+        "Upplands-Bro",
+        "Burlöv",
+        "Malmö",
+        "Nynäshamn",
+        "Strängnäs",
+        "Storfors",
+        "Markaryd",
+        "Dals-Ed",
+        "Färgelanda",
+        "Nora",
+        "Tjörn",
+        "Storuman",
+        "Haninge",
+        "Robertsfors",
+        "Östersund",
+        "Hallstahammar",
+        "Nykvarn",
+        "Lund",
+        "Västervik",
+        "Hallsberg",
+        "Kalix",
+        "Salem",
+        "Kil",
+        "Uppvidinge",
+        "Mölndal",
+        "Tibro",
+        "Nacka",
+        "Älvkarleby",
+        "Nordmaling",
+        "Vara",
+        "Surahammar",
+        "Kristinehamn",
+        "Staffanstorp",
+        "Timrå",
+        "Bengtsfors",
+        "Älmhult",
+        "Vingåker",
+        "Habo",
+        "Vimmerby",
+        "Munkedal",
+        "Enköping",
+        "Hedemora",
+        "Lidingö",
+        "Tanum",
+        "Heby",
+        "Skövde",
+        "Köping",
+        "Hammarö",
+        "Örkelljunga",
+        "Eda",
+        "Botkyrka",
+        "Danderyd",
+        "Torsås",
+        "Skara",
+        "Vadstena",
+        "Vaggeryd",
+        "Perstorp",
+        "Vårgårda",
+        "Falköping",
+        "Åtvidaberg",
+        "Älvsbyn",
+        "Kinda",
+        "Svenljunga",
+        "Överkalix",
+        "Haparanda",
+        "Partille",
+        "Osby",
+        "Sigtuna",
+        "Fagersta",
+        "Valdemarsvik",
+        "Stockholm",
+        "Herrljunga",
+        "Sollentuna",
+        "Säffle",
+        "Gnesta",
+        "Ydre",
+        "Vilhelmina",
+        "Lomma",
+        "Flen",
+        "Sorsele",
+        "Täby",
+        "Hjo",
+        "Tyresö",
+        "Strömsund",
+        "Mullsjö",
+        "Emmaboda",
+        "Kungsör",
+        "Upplands Väsby",
+        "Högsby",
+        "Vänersborg",
+        "Skinnskatteberg",
+        "Laxå",
+        "Öckerö",
+        "Norberg",
+        "Ragunda",
+        "Solna",
+        "Arboga",
+        "Malå",
+        "Årjäng",
+        "Åmål",
+        "Oxelösund",
+        "Vaxholm",
+        "Norsjö",
+        "Bjurholm",
+        "Grästorp",
+        "Sundbyberg",
+        "Arjeplog"];
+    $("#city").autocomplete({ source: cities });
+
+    // enable/disable controls by scope
+    function refreshControls() {
+      $("#dropdown1, #dropdown2, #city").prop("disabled", true);
+      const val = $("input[name='radio']:checked").val();
+      if (val === "option1") $("#dropdown1").prop("disabled", false);
+      if (val === "option2") $("#dropdown2").prop("disabled", false);
+      if (val === "option3") $("#city").prop("disabled", false);
+    }
+    $("input[name='radio']").on("change", refreshControls);
+
+    // toggle optional multipliers upload
+    $("#multEnable").on("change", function(){
+      const show = $(this).is(":checked");
+      $("#multUploadSection").toggle(show);
+      if(show){ $("#multCsv").attr("required", true); }
+      else { $("#multCsv").removeAttr("required"); }
+    });
+
+    // toggle optional existing-facility upload
+    $("#siteEnable").on("change", function(){
+      const show = $(this).is(":checked");
+      $("#siteUploadSection").toggle(show);
+      if(show){ $("#siteCsv").attr("required", true); }
+      else { $("#siteCsv").removeAttr("required"); }
+    });
+
+    // Submit with overlay + polling
+    $("#customForm").on("submit", function(e){
+      e.preventDefault();
+
+      // overlay
+      $("#progressOverlay").show();
+      let pct = 5;
+      const tick = setInterval(()=>{
+        pct = Math.min(95, pct + (Math.random()*6+2));
+        $("#progressBar").css("width", pct.toFixed(0) + "%");
+      }, 800);
+
+      $.ajax({
+        type:"POST",
+        url:"/custom/run",
+        data:new FormData(this),
+        processData:false,
+        contentType:false,
+        success:function(data){
+          const jobId = data.job_id;
+          $("#progressStatus").text("Job started… crunching numbers.");
+          // poll job
+          const poll = setInterval(()=>{
+            $.getJSON(`/task-status/${jobId}`, s=>{
+              if(s.state==='finished'){
+                clearInterval(poll);
+                clearInterval(tick);
+                $("#progressBar").css("width","100%");
+                window.location=`/result2/${jobId}`;
+              }else if(s.state==='failed'){
+                clearInterval(poll);
+                clearInterval(tick);
+                $("#progressOverlay").hide();
+                $.getJSON(`/fetch-error/${jobId}`,e=>{
+                  alert('Task failed: '+(e.error_message||'Unknown error'));
+                });
+              }
+            });
+          }, 5000);
+        },
+        error:function(x,s,e){
+          clearInterval(tick);
+          $("#progressOverlay").hide();
+          alert("Submit error: "+e);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
