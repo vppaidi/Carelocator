@@ -35,6 +35,7 @@ from redis import Redis
 from rq import get_current_job
 from worker3 import haversine
 from io import StringIO
+import traceback
 
 
 # Load environment variables from .env file
@@ -229,7 +230,9 @@ def pfac_task2(
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
 
-    except Exception as e:
-        error_message = f"Unexpected error: {str(e)}"
+    except Exception:
+        error_message = traceback.format_exc()
         redis_conn.set(f"error_for_job_{job_id}", error_message)
+        print(error_message)  # this will appear in rq1_err / rq1_out depending on config
         return "Task failed"
+
