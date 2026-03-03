@@ -30,12 +30,9 @@ def _load_dm(dm) -> pd.DataFrame:
     """
     Load the precomputed OD matrix.
 
-    In production (DSS_prod.py), pfac_task2 receives dm as a PATH string (csv/parquet).
-    We support:
-      - dm as a path: "*.parquet" or "*.csv"
-      - dm as an in-memory object: list-of-records, list-of-lists, numpy array, etc.
+    Production flow: dm is a PATH string (csv/parquet).
+    Also supports legacy in-memory payloads.
     """
-    # Path case (production)
     if isinstance(dm, str):
         path = dm
         if not os.path.exists(path):
@@ -44,20 +41,18 @@ def _load_dm(dm) -> pd.DataFrame:
         if path.lower().endswith(".parquet"):
             df = pd.read_parquet(path)
         else:
-            # CSV: OD matrices in your app are typically headerless numeric grids
+            # headerless numeric OD grid
             df = pd.read_csv(path, header=None, dtype=np.float32, low_memory=False)
 
-        # Ensure numeric
-        df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+        # Ensure numeric float32
+        df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(np.float32, copy=False)
         return df
 
-    # DataFrame case
     if isinstance(dm, pd.DataFrame):
-        return dm
+        return dm.apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(np.float32, copy=False)
 
-    # In-memory case (records / array-like)
     df = pd.DataFrame(dm)
-    df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+    df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(np.float32, copy=False)
     return df
 
 
@@ -75,11 +70,9 @@ def pfac_task2(
     """
     EXPLOIT with preloaded OD matrix:
     - Clients are rows of OD (existing demand points).
-    - Candidate facilities are the uploaded points. We map each uploaded point
-      to the nearest 'origin' index, and take those OD columns as the
-      candidate cost columns.
-    - 'facilit' marks which uploaded points are predefined/open (1) vs optional (0),
-      if a 'facility' column exists in that uploaded file.
+    - Candidate facilities are uploaded points; each is mapped to nearest origin index,
+      and those OD columns are used as candidate cost columns.
+    - 'facilit' may include a 'facility' column marking predefined/open candidates.
     - mode ∈ {'pmedian','pcenter'}.
     """
     job = get_current_job()
@@ -89,44 +82,47 @@ def pfac_task2(
         # ---------- Inputs & parsing ----------
         origins_df = pd.DataFrame(origins)
 
-        # Uploaded destinations (candidate points)
         destinations = pd.read_json(StringIO(uploaded_data_json))
         if isinstance(destinations, str):
             destinations = pd.DataFrame(json.loads(destinations))
 
-        # Uploaded CSV content (may or may not contain 'facility' column)
         facilit_df = pd.read_json(StringIO(facilit))
         if isinstance(facilit_df, str):
             facilit_df = pd.DataFrame(json.loads(facilit_df))
 
         # Facility vector aligned with uploaded rows (candidates)
-        # Default: no predefined facilities
-        if 'facility' in facilit_df.columns:
-            facilit_vec = pd.to_numeric(facilit_df['facility'], errors='coerce').fillna(0).astype(int).to_numpy()
-            nearest_origin_indexes = facilit_df[facilit_df['facility'] == 1].index.tolist()
+        if "facility" in facilit_df.columns:
+            facilit_vec = (
+                pd.to_numeric(facilit_df["facility"], errors="coerce")
+                .fillna(0)
+                .astype(int)
+                .to_numpy()
+            )
+            nearest_origin_indexes = facilit_df[facilit_df["facility"] == 1].index.tolist()
         else:
             facilit_vec = np.zeros(len(destinations), dtype=int)
             nearest_origin_indexes = []
 
-        # If some are pre-open, add them to P
+        # IMPORTANT: do NOT change user's P requirement; just add predefined count
         count_of_ones = int((facilit_vec == 1).sum())
         P_FACILITIES = int(P_FACILITIES) + count_of_ones
 
-        # weights (clients,) as numpy 1D
-        weights = pd.DataFrame(wei).to_numpy(dtype=float)
-        weights = np.ravel(weights).astype(float, copy=False)
+        # weights (clients,) float32 1D
+        weights = np.ravel(pd.DataFrame(wei).to_numpy(dtype=np.float32)).astype(np.float32, copy=False)
 
         # ---------- Map uploaded candidates to OD columns ----------
-        # For each uploaded candidate, find nearest origin index
         nearest_origins = []
         for _, dest_row in destinations.iterrows():
-            min_distance = float('inf')
+            min_distance = float("inf")
             nearest_origin_index = None
+
+            dlat = float(dest_row["Latitude"])
+            dlon = float(dest_row["Longitude"])
 
             for idx, orig_row in origins_df.iterrows():
                 dist = haversine(
-                    float(dest_row['Latitude']), float(dest_row['Longitude']),
-                    float(orig_row['Latitude']), float(orig_row['Longitude'])
+                    dlat, dlon,
+                    float(orig_row["Latitude"]), float(orig_row["Longitude"])
                 )
                 if dist < min_distance:
                     min_distance = dist
@@ -134,24 +130,31 @@ def pfac_task2(
 
             nearest_origins.append(nearest_origin_index)
 
-        # ---------- Load OD matrix ----------
-        distance_matrix = _load_dm(dm)
-
-        # Keep existing convention: round to integers
-        distance_matrix = distance_matrix.round(decimals=0)
-
-        od_matrix = distance_matrix.to_numpy(dtype=float)
-
-        # CO2 scaling
-        cotwo = 0.15  # kg per km
-        cm = od_matrix * cotwo
-
-        # Candidate columns = mapped origin indices
         indices = [int(i) for i in nearest_origins if i is not None]
         if not indices:
             raise ValueError("No candidate-to-origin mapping could be computed (indices list is empty).")
 
-        cost_matrix = cm[:, indices]  # shape: (n_clients, n_candidates)
+        # ---------- Load OD matrix ----------
+        distance_matrix = _load_dm(dm)
+
+        # Keep your rounding convention (stays float32)
+        distance_matrix = distance_matrix.round(0)
+
+        n_cli = int(distance_matrix.shape[0])
+        if len(weights) != n_cli:
+            raise ValueError(
+                f"OD/weights mismatch: OD has {n_cli} client rows but weights has {len(weights)}."
+            )
+
+        # ---------- Build cost matrix efficiently (avoid full NxN scaling) ----------
+        cotwo = np.float32(0.15)  # kg per km
+
+        # float32 numpy view (avoid copy if possible)
+        od_matrix = distance_matrix.to_numpy(dtype=np.float32, copy=False)
+
+        # Slice candidate columns first, then scale (saves huge memory)
+        cost_matrix = od_matrix[:, indices].astype(np.float32, copy=False)
+        cost_matrix *= cotwo
 
         # ---------- Solve ----------
         solver = highs_solver()
@@ -163,14 +166,14 @@ def pfac_task2(
                 weights=weights,
                 p_facilities=P_FACILITIES,
                 predefined_facilities_arr=facilit_vec,
-                name="p-median-exploit-preloaded"
+                name="p-median-exploit-preloaded",
             )
             res = mdl.solve(solver)
 
             total_kg = float(res.problem.objective.value())
-            total_km = total_kg / cotwo
-            mean_kg = float(res.mean_dist)   # unweighted mean (per client) in kg
-            mean_km = mean_kg / cotwo
+            total_km = total_kg / float(cotwo)
+            mean_kg = float(res.mean_dist)  # unweighted mean (per client) in kg units
+            mean_km = mean_kg / float(cotwo)
 
             title = "P-median (efficiency)"
             metrics_html = (
@@ -186,18 +189,17 @@ def pfac_task2(
                 cost_matrix=cost_matrix,
                 p_facilities=P_FACILITIES,
                 predefined_facilities_arr=facilit_vec,
-                name="p-center-exploit-preloaded"
+                name="p-center-exploit-preloaded",
             )
             res = mdl.solve(solver)
 
             max_kg = float(res.problem.objective.value())
-            max_km = max_kg / cotwo
+            max_km = max_kg / float(cotwo)
 
-            # contextual mean (unweighted) of assigned costs
             assigned_costs = [cost_matrix[i, f] for f, cli in enumerate(res.fac2cli) for i in cli]
-            assigned_costs = np.asarray(assigned_costs, dtype=float)
+            assigned_costs = np.asarray(assigned_costs, dtype=np.float32)
             mean_kg = float(assigned_costs.mean()) if assigned_costs.size else 0.0
-            mean_km = mean_kg / cotwo
+            mean_km = mean_kg / float(cotwo)
 
             title = "P-center (equity)"
             metrics_html = (
@@ -220,8 +222,7 @@ def pfac_task2(
                 cli_idx = np.asarray(cli, dtype=int)
                 served_w = float(np.sum(weights[cli_idx])) if (total_w > 0 and cli_idx.size) else 0.0
                 per = (served_w / total_w * 100.0) if total_w > 0 else 0.0
-                per = round(per, 2)
-                facility_list += f"facility {fac} serving {per}% of customers; <br>"
+                facility_list += f"facility {fac} serving {per:.2f}% of customers; <br>"
                 facil.append(fac)
 
         presult = facility_list
@@ -240,7 +241,7 @@ def pfac_task2(
             "addresses2": addresses2,
             "facil": facil,
             "nearest_origin_indexes": nearest_origin_indexes,
-            "mode": mode
+            "mode": mode,
         }
 
         redis_conn.set(f"result_data_for_job_{job_id}", json.dumps(result_data))
