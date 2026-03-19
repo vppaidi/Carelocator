@@ -294,7 +294,7 @@ def upload():
             P_FACILITIES = request.form.get('facilities')
             try:
                 P_FACILITIES = int(P_FACILITIES)
-                if not (0 <= P_FACILITIES <= 100):
+                if not (0 <= P_FACILITIES <= 300):
                     raise ValueError("Value out of range")
             except ValueError as e:
                 return f"Invalid input: {e}", 400
@@ -361,7 +361,7 @@ def upload():
             P_FACILITIES = request.form.get('facilities')
             try:
                 P_FACILITIES = int(P_FACILITIES)
-                if not (0 <= P_FACILITIES <= 100):
+                if not (0 <= P_FACILITIES <= 300):
                     raise ValueError("Value out of range")
             except ValueError as e:
                 return f"Invalid input: {e}", 400
