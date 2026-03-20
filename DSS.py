@@ -502,10 +502,10 @@ def recommend():
     P_FACILITIES = request.form.get('facilities', '').strip()
     try:
         P_FACILITIES = int(P_FACILITIES)
-        if not (1 <= P_FACILITIES <= 100):
+        if not (1 <= P_FACILITIES <= 200):
             raise ValueError
     except Exception:
-        return "Invalid number of facilities. Enter an integer between 1 and 100.", 400
+        return "Invalid number of facilities. Enter an integer between 1 and 200.", 400
     session['P_FACILITIES'] = P_FACILITIES
 
     mode = (request.form.get("mode") or "pmedian").strip().lower()
@@ -821,10 +821,10 @@ def custom_run():
         mode = (request.form.get('mode') or 'pmedian').strip().lower()
         try:
             P_FACILITIES = int(request.form.get('facilities') or '3')
-            if not (1 <= P_FACILITIES <= 100):
+            if not (1 <= P_FACILITIES <= 200):
                 raise ValueError
         except Exception:
-            return jsonify({"error":"# facilities must be an integer between 1 and 100"}), 400
+            return jsonify({"error":"# facilities must be an integer between 1 and 200"}), 400
 
         # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         # KEY: pass ONLY addresses_base to tasks (never a mixed list)
