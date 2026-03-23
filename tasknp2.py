@@ -44,21 +44,38 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
 
     try:
         # ---------- inputs ----------
+                # ---------- inputs ----------
         # cost matrix in distance/time units (clients x candidates)
         od_df = pd.DataFrame(dm)
-        cost_matrix = od_df.to_numpy(dtype=float)
+        cost_matrix = od_df.to_numpy(dtype=np.float32, copy=False)
 
         # need/pop weights (clients,)
-        w = pd.DataFrame(wei).to_numpy(dtype=float).ravel()
-        
+        w = pd.DataFrame(wei).to_numpy(dtype=np.float32, copy=False).ravel()
+
+        # basic sanity checks
+        if cost_matrix.ndim != 2:
+            raise ValueError(f"OD matrix must be 2D, got shape {cost_matrix.shape}")
+
+        n_clients, n_candidates = cost_matrix.shape
+
+        if len(w) != n_clients:
+            raise ValueError(
+                f"Weight/OD mismatch: OD has {n_clients} client rows but weights has {len(w)}."
+            )
+
+        if not (1 <= int(P_FACILITIES) <= n_candidates):
+            raise ValueError(
+                f"P_FACILITIES must be between 1 and {n_candidates}, got {P_FACILITIES}."
+            )
 
         # clamp any tiny negative noise to 0
         if (cost_matrix < 0).any():
-            cost_matrix = np.where(cost_matrix < 0, 0.0, cost_matrix)
+            np.maximum(cost_matrix, 0.0, out=cost_matrix)
 
         # optional CO2 scaling (if your matrix is in km and you want kg)
-        COTWO_PER_KM = 0.15  # kg per km
-        cm = cost_matrix * COTWO_PER_KM
+        COTWO_PER_KM = np.float32(0.15)  # kg per km
+        cm = cost_matrix.copy()
+        cm *= COTWO_PER_KM
 
         solver = highs_solver()  # <-- use HiGHS_CMD directly
 
@@ -160,6 +177,7 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
         return "Task failed"
 
     except Exception as e:
-        error_message = f"Unexpected error: {str(e)}"
+        import traceback
+        error_message = traceback.format_exc()
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
