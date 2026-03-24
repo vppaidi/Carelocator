@@ -528,22 +528,36 @@ def recommend():
         return str(e), 400
     wei = wei_df.to_dict(orient='records')
 
-    dm_df = _load_preloaded_od(selected_dropdown)
-    has_preloaded_od = dm_df is not None
+        # --- Precomputed OD for EXPLORE: pass PATH (not DataFrame) to worker ---
+    STOCKHOLMS_PARQUET_PATH = "Stockholms.parquet"  # set absolute path if needed
+    dm_path = None
+
+    if selected_dropdown and selected_dropdown.strip().lower() in ["stockholm", "stockholms", "stockholms lan", "stockholms län"]:
+        if os.path.exists(STOCKHOLMS_PARQUET_PATH):
+            dm_path = STOCKHOLMS_PARQUET_PATH
+            print(f"[DSS] Using parquet for Stockholms: {dm_path}")
+        else:
+            dm_path = _find_preloaded_path_only(selected_dropdown)
+    else:
+        dm_path = _find_preloaded_path_only(selected_dropdown)
+
+    has_preloaded_od = dm_path is not None
 
     file = request.files.get('csvFile', None)
     if not file:
         if has_preloaded_od:
-            dm = dm_df.to_dict(orient='records')
-            del dm_df
-            gc.collect()
             job = queue.enqueue(
                 recommend_task2,
-                selected_dropdown, P_FACILITIES, dm, wei, addresses_base,
+                selected_dropdown, P_FACILITIES, dm_path, wei, addresses_base,
                 mode=mode,
                 job_timeout=97200
             )
-            return jsonify({"message": "Task queued!", "job_id": job.get_id(), "addr": []}), 200
+            return jsonify({
+                "message": "Task queued!",
+                "job_id": job.get_id(),
+                "addr": [],
+                "dm_path": dm_path
+            }), 200
         else:
             job = queue.enqueue(
                 recommend_task,
@@ -552,7 +566,7 @@ def recommend():
                 job_timeout=97200
             )
             return jsonify({"message": "Task queued!", "job_id": job.get_id(), "addr": []}), 200
-
+    
     # UPLOAD path (kept as-is)
     csv_type = (request.form.get('csvType') or 'csv_c').strip().lower()
     if csv_type not in ('csv_c', 'csv_d'):
@@ -622,12 +636,9 @@ def recommend():
         gc.collect()
 
     if has_preloaded_od:
-        dm = dm_df.to_dict(orient='records')
-        del dm_df
-        gc.collect()
         job = queue.enqueue(
             recommend_task4,
-            selected_dropdown, P_FACILITIES, dm,
+            selected_dropdown, P_FACILITIES, dm_path,
             uploaded_data_json, facilit_json, origins, wei, addresses_base,
             mode=mode,
             job_timeout=97200
