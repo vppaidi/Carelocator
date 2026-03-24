@@ -25,34 +25,67 @@ from shapely.geometry import Point
 import time
 import io
 import csv
-import datetime;
+import datetime
 import redis
 import json
 from flask_rq2 import RQ
 from rq import Queue
 from redis import Redis
 from rq import get_current_job
+import gc
+import traceback
 
 
 REDIS_URL = os.environ.get("REDIS_URL")
 # TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
 
-def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="pmedian"):
+
+def _convert_numpy_types(obj):
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, list):
+        return [_convert_numpy_types(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _convert_numpy_types(v) for k, v in obj.items()}
+    return obj
+
+
+def _load_dm_from_any(dm_or_path):
+    """
+    Accept either:
+    - a path string to .parquet / .csv
+    - a legacy in-memory payload (list/dict/DataFrame-like)
+    """
+    if isinstance(dm_or_path, str):
+        if not os.path.exists(dm_or_path):
+            raise FileNotFoundError(f"Precomputed OD file not found: {dm_or_path}")
+
+        if dm_or_path.lower().endswith(".parquet"):
+            od_df = pd.read_parquet(dm_or_path)
+        else:
+            od_df = pd.read_csv(dm_or_path, header=None, dtype=np.float32, low_memory=False)
+    else:
+        od_df = pd.DataFrame(dm_or_path)
+
+    od_df = od_df.apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(np.float32, copy=False)
+    return od_df
+
+
+def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses, mode="pmedian"):
     job = get_current_job()
     job_id = job.id
 
     try:
-        # ---------- inputs ----------
-                # ---------- inputs ----------
-        # cost matrix in distance/time units (clients x candidates)
-        od_df = pd.DataFrame(dm)
+        od_df = _load_dm_from_any(dm_or_path)
         cost_matrix = od_df.to_numpy(dtype=np.float32, copy=False)
 
-        # need/pop weights (clients,)
         w = pd.DataFrame(wei).to_numpy(dtype=np.float32, copy=False).ravel()
 
-        # basic sanity checks
         if cost_matrix.ndim != 2:
             raise ValueError(f"OD matrix must be 2D, got shape {cost_matrix.shape}")
 
@@ -60,41 +93,43 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
 
         if len(w) != n_clients:
             raise ValueError(
-                f"Weight/OD mismatch: OD has {n_clients} client rows but weights has {len(w)}."
+                f"Weight/OD mismatch: len(weights)={len(w)} but OD rows={n_clients}"
             )
 
-        if not (1 <= int(P_FACILITIES) <= n_candidates):
+        if len(addresses) != n_candidates:
             raise ValueError(
-                f"P_FACILITIES must be between 1 and {n_candidates}, got {P_FACILITIES}."
+                f"Address/OD mismatch: len(addresses)={len(addresses)} but OD cols={n_candidates}"
             )
 
-        # clamp any tiny negative noise to 0
+        P_FACILITIES = int(P_FACILITIES)
+        if not (1 <= P_FACILITIES <= n_candidates):
+            raise ValueError(
+                f"P_FACILITIES must be between 1 and {n_candidates}, got {P_FACILITIES}"
+            )
+
         if (cost_matrix < 0).any():
             np.maximum(cost_matrix, 0.0, out=cost_matrix)
 
-        # optional CO2 scaling (if your matrix is in km and you want kg)
-        COTWO_PER_KM = np.float32(0.15)  # kg per km
+        COTWO_PER_KM = np.float32(0.15)
         cm = cost_matrix.copy()
         cm *= COTWO_PER_KM
 
-        solver = highs_solver()  # <-- use HiGHS_CMD directly
-
-        # ---------- solve ----------
-        mode = (mode or "pmedian").lower()
+        solver = highs_solver()
+        mode = (mode or "pmedian").strip().lower()
 
         if mode == "pmedian":
             mdl = PMedian.from_cost_matrix(
-                cost_matrix=cm,          # need-weighted objective via weights
+                cost_matrix=cm,
                 weights=w,
                 p_facilities=P_FACILITIES,
                 name="p-median-network-distance",
             )
             res = mdl.solve(solver)
 
-            total_kg = float(res.problem.objective.value())     # sum_i w_i * assigned_cost_i
-            total_km = total_kg / COTWO_PER_KM
-            mean_kg  = float(res.mean_dist)                     # per client (unweighted)
-            mean_km  = mean_kg / COTWO_PER_KM
+            total_kg = float(res.problem.objective.value())
+            total_km = total_kg / float(COTWO_PER_KM)
+            mean_kg = float(res.mean_dist)
+            mean_km = mean_kg / float(COTWO_PER_KM)
 
             fac2cli = res.fac2cli
             title = "P-median (efficiency)"
@@ -107,21 +142,20 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
 
         elif mode == "pcenter":
             mdl = PCenter.from_cost_matrix(
-                cost_matrix=cm,          # p-center ignores weights by definition
+                cost_matrix=cm,
                 p_facilities=P_FACILITIES,
                 name="p-center-network-distance",
             )
             res = mdl.solve(solver)
 
-            max_kg = float(res.problem.objective.value())       # minimized maximum client cost
-            max_km = max_kg / COTWO_PER_KM
+            max_kg = float(res.problem.objective.value())
+            max_km = max_kg / float(COTWO_PER_KM)
 
             fac2cli = res.fac2cli
-            # mean for context only
             assigned_costs = [cm[i, f] for f, cli in enumerate(fac2cli) for i in cli]
-            assigned_costs = np.asarray(assigned_costs, dtype=float)
+            assigned_costs = np.asarray(assigned_costs, dtype=np.float32)
             mean_kg = float(assigned_costs.mean()) if assigned_costs.size else 0.0
-            mean_km = mean_kg / COTWO_PER_KM
+            mean_km = mean_kg / float(COTWO_PER_KM)
 
             title = "P-center (equity)"
             metrics_html = (
@@ -129,55 +163,36 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm, wei, addresses, mode="p
                 f"Mean CO₂ per client (for context) = {mean_kg:.2f} kg "
                 f"({mean_km:.2f} km).<br>"
             )
-
         else:
             raise ValueError("mode must be 'pmedian' or 'pcenter'")
 
-        # ---------- reporting ----------
         facility_list = f"Please find your results below <br><b>{title}</b><br>" + metrics_html
 
         total_clients = sum(len(cli) for cli in fac2cli)
-        opened_idx = []
+        facil = []
         for fac, cli in enumerate(fac2cli):
-            if len(cli):
-                opened_idx.append(fac)
+            if len(cli) > 0:
+                facil.append(fac)
                 share = (len(cli) / total_clients * 100.0) if total_clients else 0.0
                 facility_list += f"facility {fac} serving {share:.2f}% of customers; <br>"
 
-        presult = facility_list
-        facil = opened_idx
-
-        # if `addresses` is a list of candidate dicts with lat/lon, filter opened ones
-        addresses2 = []
-        try:
-            for idx in facil:
-                if 0 <= idx < len(addresses):
-                    a = dict(addresses[idx])
-                    a["idx"] = idx
-                    addresses2.append(a)
-        except Exception:
-            addresses2 = []
-
-        # ---------- return/store ----------
         result_data = {
-            "presult": presult,
+            "presult": facility_list,
             "facil": facil,
-            "addresses": addresses,          # original list
-            "addresses2": addresses2,        # opened facilities only
-            "nearest_origin_indexes": [],    # not used here
+            "addresses": addresses,
+            "nearest_origin_indexes": [],
             "mode": mode
         }
 
+        result_data = _convert_numpy_types(result_data)
         redis_conn.set(f"result_data_for_job_{job_id}", json.dumps(result_data))
+
+        del od_df, cost_matrix, cm, w
+        gc.collect()
+
         return "Task complete"
 
-    except RuntimeError:
-        error_message = "Runtime Error: Please check your input"
-        redis_conn.set(f"error_for_job_{job_id}", error_message)
-        return "Task failed"
-
-    except Exception as e:
-        import traceback
+    except Exception:
         error_message = traceback.format_exc()
         redis_conn.set(f"error_for_job_{job_id}", error_message)
         return "Task failed"
