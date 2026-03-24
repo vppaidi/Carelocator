@@ -37,7 +37,6 @@ import traceback
 
 
 REDIS_URL = os.environ.get("REDIS_URL")
-# TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
 
 
@@ -58,8 +57,8 @@ def _convert_numpy_types(obj):
 def _load_dm_from_any(dm_or_path):
     """
     Accept either:
-    - a path string to .parquet / .csv
-    - a legacy in-memory payload (list/dict/DataFrame-like)
+    - path to parquet/csv
+    - legacy in-memory payload
     """
     if isinstance(dm_or_path, str):
         if not os.path.exists(dm_or_path):
@@ -72,7 +71,14 @@ def _load_dm_from_any(dm_or_path):
     else:
         od_df = pd.DataFrame(dm_or_path)
 
-    od_df = od_df.apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(np.float32, copy=False)
+    # Convert to numeric but do NOT silently hide broken data forever
+    od_df = od_df.apply(pd.to_numeric, errors="coerce")
+
+    if od_df.isna().any().any():
+        bad_count = int(od_df.isna().sum().sum())
+        raise ValueError(f"OD matrix contains {bad_count} non-numeric/NaN values")
+
+    od_df = od_df.astype(np.float32, copy=False)
     return od_df
 
 
@@ -107,15 +113,36 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
                 f"P_FACILITIES must be between 1 and {n_candidates}, got {P_FACILITIES}"
             )
 
+        if not np.isfinite(cost_matrix).all():
+            raise ValueError("OD matrix contains NaN or inf")
+
+        if not np.isfinite(w).all():
+            raise ValueError("Weights contain NaN or inf")
+
+        if cost_matrix.shape[0] == 0 or cost_matrix.shape[1] == 0:
+            raise ValueError(f"Empty cost matrix: {cost_matrix.shape}")
+
         if (cost_matrix < 0).any():
             np.maximum(cost_matrix, 0.0, out=cost_matrix)
 
         COTWO_PER_KM = np.float32(0.15)
-        cm = cost_matrix.copy()
+
+        # single extra matrix copy only
+        cm = cost_matrix.astype(np.float32, copy=True)
         cm *= COTWO_PER_KM
 
-        solver = highs_solver()
         mode = (mode or "pmedian").strip().lower()
+
+        print(
+            f"[tasknp2] selected={selected_dropdown}, shape={cm.shape}, "
+            f"len(weights)={len(w)}, len(addresses)={len(addresses)}, "
+            f"p={P_FACILITIES}, mode={mode}, "
+            f"min={float(cm.min())}, max={float(cm.max())}",
+            flush=True
+        )
+
+        solver = highs_solver()
+        print(f"[tasknp2] solver={type(solver).__name__}", flush=True)
 
         if mode == "pmedian":
             mdl = PMedian.from_cost_matrix(
@@ -124,7 +151,14 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
                 p_facilities=P_FACILITIES,
                 name="p-median-network-distance",
             )
-            res = mdl.solve(solver)
+
+            try:
+                res = mdl.solve(solver)
+            except Exception as e:
+                raise RuntimeError(
+                    f"PMedian solve failed with solver={type(solver).__name__}, "
+                    f"shape={cm.shape}, p={P_FACILITIES}: {e}"
+                ) from e
 
             total_kg = float(res.problem.objective.value())
             total_km = total_kg / float(COTWO_PER_KM)
@@ -146,7 +180,14 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
                 p_facilities=P_FACILITIES,
                 name="p-center-network-distance",
             )
-            res = mdl.solve(solver)
+
+            try:
+                res = mdl.solve(solver)
+            except Exception as e:
+                raise RuntimeError(
+                    f"PCenter solve failed with solver={type(solver).__name__}, "
+                    f"shape={cm.shape}, p={P_FACILITIES}: {e}"
+                ) from e
 
             max_kg = float(res.problem.objective.value())
             max_km = max_kg / float(COTWO_PER_KM)
@@ -181,7 +222,7 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
             "facil": facil,
             "addresses": addresses,
             "nearest_origin_indexes": [],
-            "mode": mode
+            "mode": mode,
         }
 
         result_data = _convert_numpy_types(result_data)
