@@ -502,7 +502,7 @@ def recommend():
     P_FACILITIES = request.form.get('facilities', '').strip()
     try:
         P_FACILITIES = int(P_FACILITIES)
-        if not (1 <= P_FACILITIES <= 200):
+        if not (1 <= P_FACILITIES <= 250):
             raise ValueError
     except Exception:
         return "Invalid number of facilities. Enter an integer between 1 and 200.", 400
@@ -832,7 +832,7 @@ def custom_run():
         mode = (request.form.get('mode') or 'pmedian').strip().lower()
         try:
             P_FACILITIES = int(request.form.get('facilities') or '3')
-            if not (1 <= P_FACILITIES <= 200):
+            if not (1 <= P_FACILITIES <= 250):
                 raise ValueError
         except Exception:
             return jsonify({"error":"# facilities must be an integer between 1 and 200"}), 400
