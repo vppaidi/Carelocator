@@ -13,7 +13,7 @@ from flask import Flask, render_template, session, redirect, url_for, session, r
 import os
 import pandas as pd
 import numpy as np
-import pulp
+import pulp as pl
 from spopt.locate import PMedian, PCenter
 from solvers import highs_solver
 
@@ -141,7 +141,8 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
             flush=True
         )
 
-        solver = highs_solver()
+        #solver = highs_solver()
+        solver = pl.HiGHS(msg=False)
         print(f"[tasknp2] solver={type(solver).__name__}", flush=True)
 
         if mode == "pmedian":
