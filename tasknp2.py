@@ -1,39 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 15 11:16:04 2023
-
-@author: vpp
-"""
-
-from flask import Flask, render_template, session, redirect, url_for, session, request, jsonify
-#from flask_sqlalchemy import SQLAlchemy
-#from sqlalchemy import text
-#from sqlalchemy import create_engine
 
 import os
-import pandas as pd
-import numpy as np
-import pulp
-from spopt.locate import PMedian, PCenter
-from solvers import highs_solver
-
-import osmnx as ox
-import networkx as nx
-import pandas as pd
-import geopandas as gpd
-from shapely.geometry import Point
-import time
-import io
-import csv
-import datetime
-import redis
+import gc
 import json
-from flask_rq2 import RQ
-from rq import Queue
+import traceback
+import resource
+
+import numpy as np
+import pandas as pd
 from redis import Redis
 from rq import get_current_job
-import gc
-import traceback
+from spopt.locate import PMedian, PCenter
+
+from solvers import highs_solver
 
 
 REDIS_URL = os.environ.get("REDIS_URL")
@@ -54,6 +33,17 @@ def _convert_numpy_types(obj):
     return obj
 
 
+def _rss_mb():
+    """
+    Max resident set size in MB.
+    On Linux, ru_maxrss is in KB.
+    """
+    try:
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    except Exception:
+        return -1.0
+
+
 def _load_dm_from_any(dm_or_path):
     """
     Accept either:
@@ -67,19 +57,22 @@ def _load_dm_from_any(dm_or_path):
         if dm_or_path.lower().endswith(".parquet"):
             od_df = pd.read_parquet(dm_or_path)
         else:
-            od_df = pd.read_csv(dm_or_path, header=None, dtype=np.float32, low_memory=False)
+            od_df = pd.read_csv(
+                dm_or_path,
+                header=None,
+                dtype=np.float32,
+                low_memory=False
+            )
     else:
         od_df = pd.DataFrame(dm_or_path)
 
-    # Convert to numeric but do NOT silently hide broken data forever
     od_df = od_df.apply(pd.to_numeric, errors="coerce")
 
     if od_df.isna().any().any():
         bad_count = int(od_df.isna().sum().sum())
         raise ValueError(f"OD matrix contains {bad_count} non-numeric/NaN values")
 
-    od_df = od_df.astype(np.float32, copy=False)
-    return od_df
+    return od_df.astype(np.float32, copy=False)
 
 
 def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses, mode="pmedian"):
@@ -87,10 +80,18 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
     job_id = job.id
 
     try:
+        print(f"[tasknp2] RSS start: {_rss_mb():.1f} MB", flush=True)
+
+        # ----- Load OD matrix -----
         od_df = _load_dm_from_any(dm_or_path)
         cost_matrix = od_df.to_numpy(dtype=np.float32, copy=False)
 
+        # weights
         w = pd.DataFrame(wei).to_numpy(dtype=np.float32, copy=False).ravel()
+
+        # We do not need the DataFrame anymore
+        del od_df
+        gc.collect()
 
         if cost_matrix.ndim != 2:
             raise ValueError(f"OD matrix must be 2D, got shape {cost_matrix.shape}")
@@ -119,30 +120,32 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
         if not np.isfinite(w).all():
             raise ValueError("Weights contain NaN or inf")
 
-        if cost_matrix.shape[0] == 0 or cost_matrix.shape[1] == 0:
+        if n_clients == 0 or n_candidates == 0:
             raise ValueError(f"Empty cost matrix: {cost_matrix.shape}")
 
+        # Clean negatives in place
         if (cost_matrix < 0).any():
             np.maximum(cost_matrix, 0.0, out=cost_matrix)
 
+        mode = (mode or "pmedian").strip().lower()
         COTWO_PER_KM = np.float32(0.15)
 
-        # single extra matrix copy only
-        cm = cost_matrix.astype(np.float32, copy=True)
-        cm *= COTWO_PER_KM
-
-        mode = (mode or "pmedian").strip().lower()
-
         print(
-            f"[tasknp2] selected={selected_dropdown}, shape={cm.shape}, "
+            f"[tasknp2] selected={selected_dropdown}, shape={cost_matrix.shape}, "
             f"len(weights)={len(w)}, len(addresses)={len(addresses)}, "
             f"p={P_FACILITIES}, mode={mode}, "
-            f"min={float(cm.min())}, max={float(cm.max())}",
+            f"min={float(cost_matrix.min())}, max={float(cost_matrix.max())}, "
+            f"RSS before scale={_rss_mb():.1f} MB",
             flush=True
         )
 
+        # Scale in place to avoid another large copy
+        cost_matrix *= COTWO_PER_KM
+        cm = cost_matrix
+
+        print(f"[tasknp2] RSS after scale: {_rss_mb():.1f} MB", flush=True)
+
         solver = highs_solver()
-        
         print(f"[tasknp2] solver={type(solver).__name__}", flush=True)
 
         if mode == "pmedian":
@@ -153,6 +156,8 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
                 name="p-median-network-distance",
             )
 
+            print(f"[tasknp2] RSS before PMedian solve: {_rss_mb():.1f} MB", flush=True)
+
             try:
                 res = mdl.solve(solver)
             except Exception as e:
@@ -160,6 +165,8 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
                     f"PMedian solve failed with solver={type(solver).__name__}, "
                     f"shape={cm.shape}, p={P_FACILITIES}: {e}"
                 ) from e
+
+            print(f"[tasknp2] RSS after PMedian solve: {_rss_mb():.1f} MB", flush=True)
 
             total_kg = float(res.problem.objective.value())
             total_km = total_kg / float(COTWO_PER_KM)
@@ -182,6 +189,8 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
                 name="p-center-network-distance",
             )
 
+            print(f"[tasknp2] RSS before PCenter solve: {_rss_mb():.1f} MB", flush=True)
+
             try:
                 res = mdl.solve(solver)
             except Exception as e:
@@ -189,6 +198,8 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
                     f"PCenter solve failed with solver={type(solver).__name__}, "
                     f"shape={cm.shape}, p={P_FACILITIES}: {e}"
                 ) from e
+
+            print(f"[tasknp2] RSS after PCenter solve: {_rss_mb():.1f} MB", flush=True)
 
             max_kg = float(res.problem.objective.value())
             max_km = max_kg / float(COTWO_PER_KM)
@@ -212,6 +223,7 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
 
         total_clients = sum(len(cli) for cli in fac2cli)
         facil = []
+
         for fac, cli in enumerate(fac2cli):
             if len(cli) > 0:
                 facil.append(fac)
@@ -229,12 +241,14 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
         result_data = _convert_numpy_types(result_data)
         redis_conn.set(f"result_data_for_job_{job_id}", json.dumps(result_data))
 
-        del od_df, cost_matrix, cm, w
+        # cleanup
+        del cm, cost_matrix, w
         gc.collect()
 
+        print(f"[tasknp2] RSS end: {_rss_mb():.1f} MB", flush=True)
         return "Task complete"
 
     except Exception:
         error_message = traceback.format_exc()
         redis_conn.set(f"error_for_job_{job_id}", error_message)
-        return "Task failed"
+        raise
