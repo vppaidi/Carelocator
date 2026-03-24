@@ -25,14 +25,15 @@ from worker3 import haversine            # <-- haversine for nearest mapping
 from io import StringIO
 import traceback
 from solvers import highs_solver
+import gc
 
 # --- Redis connection ---------------------------------------------------------
 REDIS_URL = os.environ.get("REDIS_URL")
 # TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
 
+
 def convert_numpy_types(obj):
-    """Converts numpy types into Python native types for JSON serialization."""
     if isinstance(obj, np.integer):
         return int(obj)
     elif isinstance(obj, np.floating):
@@ -46,25 +47,36 @@ def convert_numpy_types(obj):
     return obj
 
 
+def _load_dm_from_any(dm_or_path):
+    if isinstance(dm_or_path, str):
+        if not os.path.exists(dm_or_path):
+            raise FileNotFoundError(f"Precomputed OD file not found: {dm_or_path}")
+
+        if dm_or_path.lower().endswith(".parquet"):
+            od_df = pd.read_parquet(dm_or_path)
+        else:
+            od_df = pd.read_csv(dm_or_path, header=None, dtype=np.float32, low_memory=False)
+    else:
+        od_df = pd.DataFrame(dm_or_path)
+
+    od_df = od_df.apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(np.float32, copy=False)
+    return od_df
+
+
 def _nearest_origins_by_haversine(origins_df: pd.DataFrame, fac_coords: np.ndarray) -> list[int]:
-    """
-    Map each uploaded facility coordinate to the nearest demand point index
-    using haversine (great-circle) distance in km. Duplicates are de-duplicated
-    with order preserved.
-    """
     demand_coords = origins_df[["Latitude", "Longitude"]].to_numpy(dtype=float)
     nearest = []
-    for (f_lat, f_lon) in fac_coords:  # (Latitude, Longitude)
+
+    for (f_lat, f_lon) in fac_coords:
         best_idx = None
         best_d = float("inf")
         for i, (o_lat, o_lon) in enumerate(demand_coords):
-            d = haversine(f_lat, f_lon, o_lat, o_lon)  # km
+            d = haversine(f_lat, f_lon, o_lat, o_lon)
             if d < best_d:
                 best_d = d
                 best_idx = i
         nearest.append(best_idx)
 
-    # de-duplicate while preserving order
     seen = set()
     unique = []
     for i in nearest:
@@ -75,18 +87,12 @@ def _nearest_origins_by_haversine(origins_df: pd.DataFrame, fac_coords: np.ndarr
 
 
 def _opened_indices_from_result(res, fac2cli, fallback_len: int | None = None) -> list[int]:
-    """
-    Try to recover the set of opened facility indices from spopt result.
-    Prefer explicit attributes, fall back to fac2cli (non-empty assignment).
-    """
-    # 1) explicit open set
     if hasattr(res, "open_facilities") and res.open_facilities is not None:
         try:
             return sorted({int(i) for i in np.ravel(res.open_facilities)})
         except Exception:
             pass
 
-    # 2) y variables
     if hasattr(res, "y") and res.y is not None:
         try:
             opened = []
@@ -101,12 +107,10 @@ def _opened_indices_from_result(res, fac2cli, fallback_len: int | None = None) -
         except Exception:
             pass
 
-    # 3) fallback: any assigned clients
     opened = [j for j, cli in enumerate(fac2cli) if isinstance(cli, list) and len(cli) > 0]
     if opened:
         return opened
 
-    # 4) as a last resort
     if fallback_len:
         return list(range(fallback_len))
     return []
@@ -115,7 +119,7 @@ def _opened_indices_from_result(res, fac2cli, fallback_len: int | None = None) -
 def recommend_task4(
     selected_dropdown,
     P_FACILITIES,
-    dm,
+    dm_or_path,
     uploaded_data_json,
     facilit,
     origins,
@@ -123,89 +127,78 @@ def recommend_task4(
     addresses,
     mode="pmedian"
 ):
-    """
-    EXPLORE with preloaded OD (dm) + user-uploaded facilities.
-
-    - Clients:    demand points (origins rows)
-    - Candidates: demand points themselves (OD columns)
-    - Uploaded facilities mapped to nearest demand candidates and forced-open via
-      predefined_facilities_arr (1=fixed open).
-    - We then open **P_FACILITIES MORE** facilities in addition to the forced ones.
-
-    Supports:
-      - pmedian: efficiency objective (uses weights)
-      - pcenter: equity objective (ignores weights), but still respects predefined facilities.
-    """
     job = get_current_job()
     job_id = job.id
 
     try:
-        # ---------- Inputs ----------
-        origins_df = pd.DataFrame(origins)  # must contain Latitude, Longitude
+        origins_df = pd.DataFrame(origins)
         if not {"Latitude", "Longitude"}.issubset(origins_df.columns):
             raise KeyError("origins must include 'Latitude' and 'Longitude'")
 
-        # Uploaded candidate rows
         destinations = pd.read_json(StringIO(uploaded_data_json))
         if isinstance(destinations, str):
             destinations = pd.DataFrame(json.loads(destinations))
         if not {"Latitude", "Longitude"}.issubset(destinations.columns):
             raise KeyError("Uploaded CSV must include 'Latitude' and 'Longitude' columns")
 
-        # Facility flags for uploaded rows
         facilit_df = pd.read_json(StringIO(facilit))
         if isinstance(facilit_df, str):
             facilit_df = pd.DataFrame(json.loads(facilit_df))
         if "facility" not in facilit_df.columns:
             raise KeyError("Uploaded facilities file must include a 'facility' column (1=open, 0=candidate)")
 
-        # Map uploaded coords to nearest demand points (HAVERSINE)
         uploaded_coords = destinations[["Latitude", "Longitude"]].to_numpy(dtype=float)
         mapped_indices = _nearest_origins_by_haversine(origins_df, uploaded_coords)
 
-        # Candidate-level forced-open mask (length == #candidates == len(origins))
-        n_candidates = len(origins_df)
+        od_df = _load_dm_from_any(dm_or_path)
+        od_matrix = od_df.to_numpy(dtype=np.float32, copy=False)
+
+        if od_matrix.ndim != 2:
+            raise ValueError(f"OD matrix must be 2D, got shape {od_matrix.shape}")
+
+        n_clients, n_candidates = od_matrix.shape
+
+        weights = pd.DataFrame(wei).to_numpy(dtype=np.float32, copy=False).ravel()
+
+        if len(weights) != n_clients:
+            raise ValueError(
+                f"Weight/OD mismatch: len(weights)={len(weights)} but OD rows={n_clients}"
+            )
+
+        if len(origins_df) != n_candidates:
+            raise ValueError(
+                f"Candidate/OD mismatch: len(origins)={len(origins_df)} but OD cols={n_candidates}"
+            )
+
         facility_mask = np.zeros(n_candidates, dtype=int)
         for idx_upl, row in facilit_df.iterrows():
             if idx_upl < len(mapped_indices):
                 cand_idx = mapped_indices[idx_upl]
-                if int(row.get("facility", 0)) == 1:
+                if 0 <= cand_idx < n_candidates and int(row.get("facility", 0)) == 1:
                     facility_mask[cand_idx] = 1
 
         num_existing = int(facility_mask.sum())
         P_FACILITIES = int(P_FACILITIES)
+        p_to_open = min(num_existing + P_FACILITIES, n_candidates)
 
-        # *** KEY CHANGE: open forced + P new (clamped to candidate count) ***
-        p_to_open = num_existing + P_FACILITIES
-        if p_to_open > n_candidates:
-            p_to_open = n_candidates  # cannot open more than candidates
+        pos_mask = od_matrix > 0
+        min_nonzero = float(od_matrix[pos_mask].min()) if pos_mask.any() else 1.0
 
-        # Weights vector for clients
-        weights = pd.DataFrame(wei).to_numpy(dtype=float).ravel()
+        replace_mask = ((od_matrix == 0) | (od_matrix == 10000))
+        if od_matrix.shape[0] == od_matrix.shape[1]:
+            np.fill_diagonal(replace_mask, False)
 
-        # ---------- OD / cost matrix preprocessing ----------
-        distance_matrix = pd.DataFrame(dm).astype(float)
-
-        # Replace problematic zeros or 10000s (except diagonal) with the smallest nonzero
-        val = distance_matrix.values
-        pos_mask = val > 0
-        min_nonzero = float(val[pos_mask].min()) if pos_mask.any() else 1.0
-
-        replace_mask = ((distance_matrix == 0) | (distance_matrix == 10000))
-        np.fill_diagonal(replace_mask.values, False)  # keep diagonal
-        distance_matrix[replace_mask] = min_nonzero
-
-        distance_matrix = distance_matrix.round(0)
-        od_matrix = distance_matrix.to_numpy(dtype=float)
+        od_matrix = od_matrix.copy()
+        od_matrix[replace_mask] = min_nonzero
         od_matrix = np.where(np.isfinite(od_matrix), od_matrix, min_nonzero)
+        od_matrix = np.where(od_matrix < 0, 0.0, od_matrix).astype(np.float32, copy=False)
 
-        # CO2 scaling
-        COTWO_PER_KM = 0.15
-        cost_matrix = np.where(od_matrix < 0, 0.0, od_matrix) * COTWO_PER_KM  # kg
+        COTWO_PER_KM = np.float32(0.15)
+        cost_matrix = od_matrix.copy()
+        cost_matrix *= COTWO_PER_KM
 
-        # ---------- Solve ----------
         solver = highs_solver()
-        mode = (mode or "pmedian").lower()
+        mode = (mode or "pmedian").strip().lower()
 
         if mode == "pmedian":
             mdl = PMedian.from_cost_matrix(
@@ -218,18 +211,18 @@ def recommend_task4(
             res = mdl.solve(solver)
 
             total_kg = float(res.problem.objective.value())
-            total_km = total_kg / COTWO_PER_KM
+            total_km = total_kg / float(COTWO_PER_KM)
 
-            # Weighted mean distance (km)
             total_distance = 0.0
             total_weight = 0.0
             for fac, cli in enumerate(res.fac2cli):
                 for i in cli:
                     w_i = float(weights[i])
-                    total_distance += od_matrix[i, fac] * w_i
+                    total_distance += float(od_matrix[i, fac]) * w_i
                     total_weight += w_i
+
             mean_km = float(total_distance / total_weight) if total_weight > 0 else 0.0
-            mean_kg = mean_km * COTWO_PER_KM
+            mean_kg = mean_km * float(COTWO_PER_KM)
 
             title = "P-median (efficiency)"
             metrics_html = (
@@ -249,13 +242,12 @@ def recommend_task4(
             res = mdl.solve(solver)
 
             max_kg = float(res.problem.objective.value())
-            max_km = max_kg / COTWO_PER_KM
+            max_km = max_kg / float(COTWO_PER_KM)
 
-            # Context mean (unweighted) of assigned costs
             assigned_costs = [cost_matrix[i, f] for f, cli in enumerate(res.fac2cli) for i in cli]
-            assigned_costs = np.asarray(assigned_costs, dtype=float)
+            assigned_costs = np.asarray(assigned_costs, dtype=np.float32)
             mean_kg = float(assigned_costs.mean()) if assigned_costs.size else 0.0
-            mean_km = mean_kg / COTWO_PER_KM
+            mean_km = mean_kg / float(COTWO_PER_KM)
 
             title = "P-center (equity)"
             metrics_html = (
@@ -265,7 +257,6 @@ def recommend_task4(
         else:
             raise ValueError("mode must be 'pmedian' or 'pcenter'")
 
-        # ---------- Reporting (include ALL opened facilities) ----------
         fac2cli = res.fac2cli
         opened_idx = _opened_indices_from_result(res, fac2cli, fallback_len=len(origins_df))
         opened_idx = sorted(set(opened_idx))
@@ -279,28 +270,29 @@ def recommend_task4(
                 share = (len(fac2cli[fac]) / total_assigned) * 100.0
             facility_list += f"Facility {fac} serving {share:.2f}% of customers; <br>"
 
-        # Indices for uploaded fixed sites (blue markers)
         uploaded_fixed_indices = []
         for idx_upl, row in facilit_df.iterrows():
             if int(row.get("facility", 0)) == 1 and idx_upl < len(mapped_indices):
                 uploaded_fixed_indices.append(mapped_indices[idx_upl])
         nearest_existing_indices = sorted(set(uploaded_fixed_indices))
 
-        # ---------- Store ----------
         result_data = {
             "presult": facility_list,
-            "addresses": addresses,                               # full candidate list with 'index'
-            "facil": opened_idx,                                  # opened facility indices (forced + new)
-            "nearest_origin_indexes": nearest_existing_indices,    # for blue markers
+            "addresses": addresses,
+            "facil": opened_idx,
+            "nearest_origin_indexes": nearest_existing_indices,
             "mode": mode
         }
+
         result_data = convert_numpy_types(result_data)
         redis_conn.set(f"result_data_for_job_{job_id}", json.dumps(result_data))
 
+        del od_df, od_matrix, cost_matrix, weights
+        gc.collect()
+
         return "Task complete"
 
-    except Exception as e:
-        error_message = f"Unexpected error: {str(e)}\n{traceback.format_exc()}"
+    except Exception:
+        error_message = traceback.format_exc()
         redis_conn.set(f"error_for_job_{job_id}", error_message)
-        print(error_message)
         return "Task failed"
