@@ -29,23 +29,22 @@
         $.getJSON(`/task-status/${jobId}`, function(data) {
             // Update your UI based on the task status. This is a basic example.
             $('#task-status').text("Task state: " + data.state);
-        
-            if (data.state === "finished") {
-                // If task is finished, redirect to the result page
-                $('#spinner').show();
-                console.log(jobId);
-                window.location.href = `/result/${jobId}`; // Use the appropriate URL for your result page
-                clearInterval(interval);  // Stop checking the task status
-            } else if (data.state !== 'queued' && data.state !== 'started') {
-                // Task is no longer in a 'queued' or 'started' state. Stop checking.
-                clearInterval(interval);
-            } else if (data.state === "failed") {
+        	if (data.state === "finished") {
+			    $('#spinner').show();
+			    console.log(jobId);
+			    window.location.href = `/result/${jobId}`;
+			    clearInterval(interval);
+			} else if (data.state === "failed") {
+			    $('#spinner').hide();
+			    fetchErrorMessage(jobId);
+			    console.error("Task failed with message:", data.message);
+			    clearInterval(interval);
+			} else if (data.state !== 'queued' && data.state !== 'started') {
+			    $('#spinner').hide();
+			    console.error("Task ended in unexpected state:", data.state, data.message);
+			    clearInterval(interval);
+			}
             
-                // Handle failure
-                fetchErrorMessage(jobId);  // Fetch and display the error message
-                console.error("Task failed with message:", data.message);
-                clearInterval(interval);  // Stop checking the task status
-            }
         });
     }
     
