@@ -21,7 +21,12 @@
          </p>
 	
 	<button onclick="exportResults()">Export Results</button>
-	
+
+	{% if has_distance_csv %}
+	  <a href="{{ url_for('download_distances', job_id=job_id) }}">
+	    <button type="button">Download facility-population distance CSV</button>
+	  </a>
+	{% endif %}
 	 		
     <div id="mapid"></div>
 
