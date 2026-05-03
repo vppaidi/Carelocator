@@ -300,7 +300,7 @@ def pfac_task2(
                 f"A mean distance of {mean_km:.2f} km was observed<br>"
             )
             fac2cli = res.fac2cli
-            distance_matrix_km = cost_matrix / cotwo
+            distance_matrix_km = cost_matrix.astype(np.float32, copy=False) / cotwo
 
             _write_facility_distance_csv(
                 job_id=job_id,
