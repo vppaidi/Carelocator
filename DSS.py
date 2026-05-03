@@ -128,6 +128,12 @@ def _choose_weights(scope_rows: pd.DataFrame, weight_system: str) -> pd.DataFram
 def _radius_for_scope(selected_radio: str) -> int:
     return {'option1': 20000, 'option2': 5000, 'option3': 1000}.get(selected_radio or '', 5000)
 
+def _get_distance_csv_for_job(job_id: str):
+    path = redis_conn.get(f"distance_csv_for_job_{job_id}")
+    if not path:
+        return None
+    return path.decode("utf-8")
+
 def _load_preloaded_od(name: str):
     """
     Legacy loader for RECOMMEND routes: load and return a DataFrame for the
@@ -925,7 +931,18 @@ def get_task_status(job_id):
 def fetch_error(job_id):
     error_message = redis_conn.get(f"error_for_job_{job_id}").decode('utf-8') if redis_conn.get(f"error_for_job_{job_id}") else None
     return jsonify({'error_message': error_message})
+    
+@app.route('/download-distances/<job_id>')
+def download_distances(job_id):
+    csv_path = _get_distance_csv_for_job(job_id)
 
+    if not csv_path or not os.path.exists(csv_path):
+        return "Distance CSV not found for this job.", 404
+
+    directory = os.path.dirname(csv_path)
+    filename = os.path.basename(csv_path)
+
+    return send_from_directory(directory, filename, as_attachment=True)
 # -----------------------------------------------------------------------------
 # Result pages
 # -----------------------------------------------------------------------------
@@ -950,8 +967,18 @@ def result(job_id):
 
         radius = session.get('radius', 5000)
         session.clear()
-        return render_template('result.html', data=presult, addresses2=addresses2,
-                               radius=radius, nearest_origin_indexes=nearest_origin_indexes)
+        distance_csv_path = _get_distance_csv_for_job(job_id)
+        has_distance_csv = bool(distance_csv_path and os.path.exists(distance_csv_path))
+        
+        return render_template(
+            'result.html',
+            data=presult,
+            addresses2=addresses2,
+            radius=radius,
+            nearest_origin_indexes=nearest_origin_indexes,
+            job_id=job_id,
+            has_distance_csv=has_distance_csv
+        )
     else:
         return jsonify({"error": "No result or error found for the given job ID."}), 404
 
@@ -985,8 +1012,18 @@ def result2(job_id):
         addresses2 = addresses3
         radius = session.get('radius', 5000)
         session.clear()
-        return render_template('result2.html', data=presult, addresses2=addresses2,
-                               radius=radius, nearest_origin_indexes=nearest_origin_indexes)
+        distance_csv_path = _get_distance_csv_for_job(job_id)
+        has_distance_csv = bool(distance_csv_path and os.path.exists(distance_csv_path))
+        
+        return render_template(
+            'result2.html',
+            data=presult,
+            addresses2=addresses2,
+            radius=radius,
+            nearest_origin_indexes=nearest_origin_indexes,
+            job_id=job_id,
+            has_distance_csv=has_distance_csv
+        )
     else:
         return jsonify({"error": "No result or error found for the given job ID."}), 404
 
