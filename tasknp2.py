@@ -293,6 +293,17 @@ def recommend_task2(selected_dropdown, P_FACILITIES, dm_or_path, wei, addresses,
             max_km = max_kg / float(COTWO_PER_KM)
 
             fac2cli = res.fac2cli
+            distance_matrix_km = cm / np.float32(0.15)
+
+            _write_facility_distance_csv(
+                job_id=job_id,
+                fac2cli=fac2cli,
+                distance_matrix_km=distance_matrix_km,
+                weights=w,
+                facility_coords=addresses,
+                population_coords=addresses,
+                facility_index_map=None
+            )
             assigned_costs = [cm[i, f] for f, cli in enumerate(fac2cli) for i in cli]
             assigned_costs = np.asarray(assigned_costs, dtype=np.float32)
             mean_kg = float(assigned_costs.mean()) if assigned_costs.size else 0.0
