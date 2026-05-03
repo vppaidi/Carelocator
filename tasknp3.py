@@ -167,6 +167,11 @@ def recommend_task3(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES
         # Increase p by the count of uploaded rows (keeps your legacy behavior)
         P_FACILITIES = int(P_FACILITIES) + facnum
 
+        
+        # Build full candidate set: uploaded first, then origins
+        destinations = pd.concat([up, origins], ignore_index=True)
+        print(len(destinations))
+
         facility_coords = []
         for _, row in destinations.iterrows():
             facility_coords.append({
@@ -180,9 +185,6 @@ def recommend_task3(selected_dropdown, uploaded_data_json, facilit, P_FACILITIES
                 "Latitude": float(row["Latitude"]),
                 "Longitude": float(row["Longitude"])
             })
-        # Build full candidate set: uploaded first, then origins
-        destinations = pd.concat([up, origins], ignore_index=True)
-        print(len(destinations))
 
         # Weights (need/pop) for clients
         weights = pd.DataFrame(wei).to_numpy(dtype=float).ravel()
