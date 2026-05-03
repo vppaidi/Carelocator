@@ -31,7 +31,83 @@ import gc
 REDIS_URL = os.environ.get("REDIS_URL")
 # TLS URL (rediss://:key@host:6380/0) works automatically; disable cert checks if needed:
 redis_conn = Redis.from_url(REDIS_URL)
+def _write_facility_distance_csv(job_id, fac2cli, distance_matrix_km, weights=None,
+                                 facility_coords=None, population_coords=None,
+                                 facility_index_map=None):
+    """
+    Write one row per assigned population point.
 
+    This avoids storing large allocation tables in Redis or HTML.
+    """
+    import os
+    import csv
+    import numpy as np
+
+    out_dir = os.path.join("static", "results")
+    os.makedirs(out_dir, exist_ok=True)
+
+    out_path = os.path.join(out_dir, f"facility_distances_{job_id}.csv")
+
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+
+        writer.writerow([
+            "facility_solver_index",
+            "facility_actual_index",
+            "facility_lat",
+            "facility_lon",
+            "population_index",
+            "population_lat",
+            "population_lon",
+            "distance_km",
+            "weight",
+            "co2_kg"
+        ])
+
+        for fac_solver_idx, cli in enumerate(fac2cli):
+            if not cli:
+                continue
+
+            actual_fac_idx = (
+                facility_index_map[fac_solver_idx]
+                if facility_index_map is not None and fac_solver_idx < len(facility_index_map)
+                else fac_solver_idx
+            )
+
+            fac_lat = ""
+            fac_lon = ""
+            if facility_coords is not None and actual_fac_idx < len(facility_coords):
+                fac_lat = facility_coords[actual_fac_idx].get("lat", facility_coords[actual_fac_idx].get("Latitude", ""))
+                fac_lon = facility_coords[actual_fac_idx].get("lon", facility_coords[actual_fac_idx].get("Longitude", ""))
+
+            for pop_idx in cli:
+                pop_idx = int(pop_idx)
+
+                dist_km = float(distance_matrix_km[pop_idx, fac_solver_idx])
+                weight = float(weights[pop_idx]) if weights is not None else 1.0
+                co2_kg = dist_km * 0.15
+
+                pop_lat = ""
+                pop_lon = ""
+                if population_coords is not None and pop_idx < len(population_coords):
+                    pop_lat = population_coords[pop_idx].get("lat", population_coords[pop_idx].get("Latitude", ""))
+                    pop_lon = population_coords[pop_idx].get("lon", population_coords[pop_idx].get("Longitude", ""))
+
+                writer.writerow([
+                    fac_solver_idx,
+                    actual_fac_idx,
+                    fac_lat,
+                    fac_lon,
+                    pop_idx,
+                    pop_lat,
+                    pop_lon,
+                    round(dist_km, 4),
+                    round(weight, 4),
+                    round(co2_kg, 6)
+                ])
+
+    redis_conn.set(f"distance_csv_for_job_{job_id}", out_path)
+    return out_path
 
 def convert_numpy_types(obj):
     if isinstance(obj, np.integer):
@@ -215,6 +291,7 @@ def recommend_task4(
 
             total_distance = 0.0
             total_weight = 0.0
+            
             for fac, cli in enumerate(res.fac2cli):
                 for i in cli:
                     w_i = float(weights[i])
@@ -258,6 +335,15 @@ def recommend_task4(
             raise ValueError("mode must be 'pmedian' or 'pcenter'")
 
         fac2cli = res.fac2cli
+        _write_facility_distance_csv(
+            job_id=job_id,
+            fac2cli=fac2cli,
+            distance_matrix_km=od_matrix,
+            weights=weights,
+            facility_coords=addresses,
+            population_coords=addresses,
+            facility_index_map=None
+        )
         opened_idx = _opened_indices_from_result(res, fac2cli, fallback_len=len(origins_df))
         opened_idx = sorted(set(opened_idx))
 
